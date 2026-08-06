@@ -102,17 +102,6 @@ http://localhost:3000/api
 | DELETE | `/user` | Delete current user | JWT |
 | DELETE | `/user/:id` | Delete user (admin) | JWT+ADMIN |
 
-#### Post (`/post`)
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/post` | Get all published posts | No |
-| GET | `/post/all` | Get all posts (admin) | JWT+ADMIN |
-| GET | `/post/my` | Get my posts | JWT |
-| GET | `/post/:id` | Get post by ID | No |
-| POST | `/post` | Create post | JWT |
-| PUT | `/post/:id` | Update post | JWT |
-| DELETE | `/post/:id` | Delete post | JWT |
-
 #### Health (`/health`)
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
@@ -163,11 +152,6 @@ src/
 │   ├── user.service.ts
 │   ├── user.dto.ts
 │   └── user.module.ts
-├── post/              # Post module (example)
-│   ├── post.controller.ts
-│   ├── post.service.ts
-│   ├── post.dto.ts
-│   └── post.module.ts
 ├── prisma/            # Prisma service
 │   └── prisma.service.ts
 ├── common/           # Shared utilities
