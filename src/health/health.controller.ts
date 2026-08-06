@@ -1,7 +1,7 @@
 import { JwtGuard } from '@/auth/jwt/jwt.guard';
 import { Roles } from '@/auth/roles/role.decorator';
 import { Role } from '@/generated/prisma/enums';
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Logger, UseGuards } from '@nestjs/common';
 import {
   HealthCheck,
   HealthCheckService,
@@ -45,7 +45,7 @@ export class HealthController {
   @ApiResponse({ status: 503, description: 'Database is unhealthy' })
   checkPrisma() {
     return this.health.check([
-      () => this.prisma.pingCheck('prisma', new PrismaService()),
+      () => this.prisma.pingCheck('prisma', new PrismaService(new Logger())),
     ]);
   }
 }

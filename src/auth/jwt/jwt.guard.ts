@@ -26,7 +26,7 @@ export class JwtGuard implements CanActivate {
     if (isPublic) return true;
 
     const request = context.switchToHttp().getRequest<Request>();
-    const token = this.extractTokenFromHeader(request);
+    const token = this.extracTokenFromCookies(request) ?? this.extractTokenFromHeader(request);
     if (!token) throw new UnauthorizedException('Missing token');
     try {
       const payload = await this.jwt.verifyAsync<JwtPayload>(token);
@@ -42,6 +42,15 @@ export class JwtGuard implements CanActivate {
         throw new ForbiddenException('Invalid token');
       }
       return false;
+    }
+  }
+
+  extracTokenFromCookies(request: Request): string | null {
+    const cookies = request.cookies;
+    if (!cookies) {
+      return null
+    } else {
+      return cookies.access_token as string ?? null;
     }
   }
 

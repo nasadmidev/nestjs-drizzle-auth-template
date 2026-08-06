@@ -28,12 +28,23 @@ export class ResponseInterceptor<T> implements NestInterceptor<
     const req = ctx.getRequest<Request>();
 
     return next.handle().pipe(
-      map((data) => ({
-        statusCode: res.statusCode,
-        path: `${req.method} ${req.path}`,
-        date: new Date().toISOString(),
-        data,
-      })),
+      map((data) => {
+        if (data === null) {
+          return {
+            statusCode: 404,
+            path: `${req.method} ${req.path}`,
+            date: new Date().toISOString(),
+            data,
+          }
+        }
+
+        return {
+          statusCode: res.statusCode,
+          path: `${req.method} ${req.path}`,
+          date: new Date().toISOString(),
+          data,
+        }
+      }),
     );
   }
 }

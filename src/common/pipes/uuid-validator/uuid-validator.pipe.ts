@@ -7,9 +7,13 @@ import {
 import { isUUID } from 'class-validator';
 import { InvalidUUIDException } from '@/common/exceptions/uuid-validator.exceptions';
 
-export const validateUUID = (id: string, fieldName = 'ID') => {
-  if (!isUUID(id)) throw new InvalidUUIDException(id, fieldName);
-};
+export const validateUUID = (...uuids: string[]) => {
+  for (const uuid of uuids) {
+    if (!isUUID(uuid)) {
+      throw new InvalidUUIDException(uuid, 'UUID');
+    }
+  }
+}
 
 /**
  * @example
