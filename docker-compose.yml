@@ -3,7 +3,7 @@ version: '3.8'
 services:
   postgres:
     image: postgres:18-alpine
-    container_name: nestjs-prisma-postgres
+    container_name: nestjs-drizzle-postgres
     restart: unless-stopped
     ports:
       - '5432:5432'

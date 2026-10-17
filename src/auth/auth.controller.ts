@@ -1,10 +1,19 @@
-import { Controller, Post, Req, UseGuards, Put, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Req,
+  UseGuards,
+  Put,
+  Body,
+  Res,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { User } from '@/db/schema';
 import { Public } from './jwt/public.decorator';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import ms, { StringValue } from 'ms';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -13,14 +22,40 @@ export class AuthController {
 
   @Public()
   @UseGuards(AuthGuard('local'))
+  @Post('login/set-cookie')
+  @ApiOperation({ summary: 'Login with username and password' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Login successful, returns JWT token on Set-Cookie Header (Web Applications)',
+  })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  async login(
+    @Req() req: Request & { user?: User },
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const token = await this.authService.login(req.user as User);
+    response.cookie('access_token', token, {
+      maxAge: ms((process.env.JWT_EXPIRES as StringValue) ?? '1h'),
+      sameSite: 'lax',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+    });
+
+    return { message: 'Logged in successfully' };
+  }
+
+  @Public()
+  @UseGuards(AuthGuard('local'))
   @Post('login')
   @ApiOperation({ summary: 'Login with username and password' })
   @ApiResponse({
     status: 200,
-    description: 'Login successful, returns JWT token',
+    description:
+      'Login successful, returns JWT token for NO Web Clients (Generics Client, Other APIS)',
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Req() req: Request & { user?: User }) {
+  async loginWithoutCookie(@Req() req: Request & { user?: User }) {
     return await this.authService.login(req.user as User);
   }
 

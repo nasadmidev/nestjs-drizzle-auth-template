@@ -2,15 +2,15 @@
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
-# NestJS Prisma Template
+# NestJS Drizzle Template
 
-A production-ready NestJS template with Prisma ORM, PostgreSQL, JWT authentication, role-based access control, and Swagger documentation.
+A production-ready NestJS template with Drizzle ORM, PostgreSQL, JWT authentication, role-based access control, and Swagger documentation.
 
 ## Features
 
 - **NestJS 11** with TypeScript
-- **Prisma 7** ORM with PostgreSQL
-- **JWT Authentication** with Passport
+- **Drizzle ORM** with PostgreSQL
+- **JWT Authentication** with Passport (cookie & header support)
 - **Role-Based Access Control** (USER, ADMIN roles)
 - **Swagger/OpenAPI** documentation
 - **Docker Compose** for local development
@@ -29,9 +29,6 @@ A production-ready NestJS template with Prisma ORM, PostgreSQL, JWT authenticati
 ```bash
 # Install dependencies
 pnpm install
-
-# Generate Prisma Client
-pnpm run db:generate
 ```
 
 ## Database Setup
@@ -42,9 +39,6 @@ pnpm run db:up
 
 # Push schema to database
 pnpm run db:push
-
-# Open Prisma Studio (optional)
-pnpm run db:studio
 ```
 
 ## Environment Variables
@@ -87,7 +81,8 @@ http://localhost:3000/api
 #### Auth (`/auth`)
 | Method | Endpoint | Description | Public |
 |--------|----------|-------------|--------|
-| POST | `/auth/login` | Login with credentials | Yes |
+| POST | `/auth/login/set-cookie` | Login with credentials (sets JWT in cookie) | Yes |
+| POST | `/auth/login` | Login with credentials (returns JWT in response) | Yes |
 | PUT | `/auth/regenerate` | Refresh JWT token | Yes |
 
 #### User (`/user`)
@@ -106,7 +101,6 @@ http://localhost:3000/api
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
 | GET | `/health` | Basic health check | No |
-| GET | `/health/prisma` | Database health check | JWT+ADMIN |
 
 ## Testing
 
@@ -130,10 +124,10 @@ pnpm run test:e2e
 pnpm run db:up        # Start PostgreSQL
 pnpm run db:down      # Stop PostgreSQL
 pnpm run db:push      # Push schema to DB
-pnpm run db:generate  # Generate Prisma Client
+pnpm run db:generate  # Generate migrations
 pnpm run db:migrate   # Run migrations
-pnpm run db:studio    # Open Prisma Studio
-pnpm run db:reset     # Reset database
+pnpm run db:studio    # Open Drizzle Studio
+pnpm run db:reset     # Drop and reset database
 ```
 
 ## Project Structure
@@ -152,8 +146,9 @@ src/
 │   ├── user.service.ts
 │   ├── user.dto.ts
 │   └── user.module.ts
-├── prisma/            # Prisma service
-│   └── prisma.service.ts
+├── db/                # Database schema and configuration
+│   ├── schema.ts
+│   └── drizzle-exception/ # Exception filter for Drizzle errors
 ├── common/           # Shared utilities
 │   ├── pipes/        # Custom pipes
 │   └── interceptors/ # Custom interceptors
@@ -174,9 +169,8 @@ Follow the existing pattern:
 
 ### Adding a New Database Model
 
-1. Add model to `prisma/schema.prisma`
-2. Run `pnpm run db:generate`
-3. Run `pnpm run db:push`
+1. Add table definition to `src/db/schema.ts`
+2. Run `pnpm run db:push`
 
 ## License
 

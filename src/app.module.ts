@@ -9,14 +9,17 @@ import { JwtGuard } from './auth/jwt/jwt.guard';
 import { RolesGuard } from './auth/roles/role.guard';
 import { DrizzleModule } from '@nestjs/drizzle';
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/pg-core';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    DrizzleModule.forRoot({
-      drizzle,
-      connection: process.env.DATABASE_URL!,
-      autoCloseConnection: true,
+    DrizzleModule.forRootAsync({
+      useFactory: async () => {
+        const db = drizzle(process.env.DATABASE_URL!);
+        await migrate([], db, { migrationsFolder: '../drizzle' });
+        return { db };
+      },
     }),
     JwtModule.register({
       global: true,

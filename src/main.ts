@@ -5,6 +5,8 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 import helmet, { type HelmetOptions } from 'helmet';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { DrizzleExceptionFilter } from './db/drizzle-exception/drizzle-exception.filter';
+import cookieParser from 'cookie-parser';
 
 const corsOptions: CorsOptions = {
   methods: ['GET', 'OPTION', 'DELETE', 'PUT', 'POST', 'HEAD'],
@@ -41,6 +43,7 @@ const helmetOptions: HelmetOptions = {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.useGlobalFilters(new DrizzleExceptionFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -51,11 +54,12 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.enableCors(corsOptions);
   app.use(helmet(helmetOptions));
+  app.use(cookieParser());
 
   const config = new DocumentBuilder()
-    .setTitle('NestJS Prisma Template API')
-    .setDescription('API documentation for NestJS Prisma Template')
-    .setVersion('1.0')
+    .setTitle('NestJS Drizzle Template API')
+    .setDescription('API documentation for NestJS Drizzle Template')
+    .setVersion('1.2')
     .addBearerAuth(
       {
         type: 'http',

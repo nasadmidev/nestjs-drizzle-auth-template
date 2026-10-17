@@ -48,12 +48,10 @@ export class JwtGuard implements CanActivate {
   }
 
   extracTokenFromCookies(request: Request): string | null {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const cookies = request.cookies;
     if (!cookies) {
       return null;
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       return (cookies.access_token as string) ?? null;
     }
   }
