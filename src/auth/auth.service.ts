@@ -7,8 +7,8 @@ import { UserService } from '@/user/user.service';
 import { compare } from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { AuthDTO } from './auth.dto';
-import { User } from '@/generated/prisma/client';
 import { TokenExpiredError, JsonWebTokenError } from '@nestjs/jwt';
+import { User } from '@/db/schema';
 
 export type JwtPayload = {
   sub: string;
@@ -28,20 +28,18 @@ export class AuthService {
   ) {}
 
   async authenticate({ identity, password }: AuthDTO) {
-    const user = identity.includes('@')
-      ? await this.userService.findOneByEmail(identity)
-      : await this.userService.findOneByUsername(identity);
+    const user = await this.userService.findOneByEmail(identity);
 
-    if (!user) return null;
-    if (!(await compare(password, user.password))) return null;
+    if (user.length === 0) return null;
+    if (!(await compare(password, user[0].password))) return null;
     return user;
   }
 
   async login(user: User | null) {
     if (!user) throw new BadRequestException('User is required');
-    const { id, username, role } = user;
+    const { id, role } = user;
 
-    const payload = { sub: id, username, role };
+    const payload = { sub: id, role };
     return await this.jwt.signAsync(payload);
   }
 

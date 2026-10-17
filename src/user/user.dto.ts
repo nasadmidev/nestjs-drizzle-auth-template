@@ -1,29 +1,15 @@
 import {
   IsEmail,
   IsEnum,
-  IsLowercase,
   IsNotEmpty,
   IsString,
   IsStrongPassword,
   MaxLength,
 } from 'class-validator';
-
 import { PartialType, ApiProperty } from '@nestjs/swagger';
-import { Role } from '@/generated/prisma/enums';
-import { IsNoSymbols } from './no-symbols.decorator';
+import { Role } from '@/db/schema';
 
 export class CreateUserDTO {
-  @ApiProperty({
-    description: 'Username (lowercase, alphanumeric only)',
-    example: 'johndoe',
-  })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(255)
-  @IsLowercase()
-  @IsNoSymbols()
-  username!: string;
-
   @ApiProperty({
     description: 'User email address',
     example: 'johndoe@example.com',

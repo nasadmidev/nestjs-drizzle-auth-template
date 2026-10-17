@@ -2,7 +2,7 @@ import { Controller, Post, Req, UseGuards, Put, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request } from 'express';
-import { User } from '@/generated/prisma/client';
+import { User } from '@/db/schema';
 import { Public } from './jwt/public.decorator';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 

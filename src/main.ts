@@ -1,6 +1,5 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { PrismaFilter } from './prisma/prisma.filter';
 import { ValidationPipe } from '@nestjs/common';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
@@ -42,7 +41,6 @@ const helmetOptions: HelmetOptions = {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.useGlobalFilters(new PrismaFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

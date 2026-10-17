@@ -13,7 +13,7 @@ export const validateUUID = (...uuids: string[]) => {
       throw new InvalidUUIDException(uuid, 'UUID');
     }
   }
-}
+};
 
 /**
  * @example

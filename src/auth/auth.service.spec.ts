@@ -4,7 +4,7 @@ import { UserService } from '@/user/user.service';
 import { JwtService, TokenExpiredError } from '@nestjs/jwt';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import bcrypt from 'bcrypt';
-import { Role, User } from '@/generated/prisma/client';
+import { Role, User } from '@/db/schema';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -26,27 +26,6 @@ describe('AuthService', () => {
   });
 
   describe('authenticate', () => {
-    it('should return user if credentials are valid (username)', async () => {
-      const spy = jest
-        .spyOn(bcrypt, 'compare')
-        .mockResolvedValue(true as never);
-      const user = { identity: 'test-user', password: 'hashed-password' };
-      userMockService.findOneByUsername.mockResolvedValue({
-        email: 'test@example.com',
-        username: 'test-user',
-        password: 'hashed-password',
-        id: 'user-id',
-        createdAt: new Date(),
-        role: 'USER',
-      });
-      const result = await service.authenticate(user);
-      expect(result).toBeTruthy();
-      expect(userMockService.findOneByUsername).toHaveBeenCalledWith(
-        'test-user',
-      );
-      expect(spy).toHaveBeenCalledWith('hashed-password', 'hashed-password');
-    });
-
     it('should return user if credentials are valid (email)', async () => {
       const spy = jest
         .spyOn(bcrypt, 'compare')
@@ -55,14 +34,15 @@ describe('AuthService', () => {
         identity: 'test@example.com',
         password: 'hashed-password',
       };
-      userMockService.findOneByEmail.mockResolvedValue({
-        email: 'test@example.com',
-        username: 'test-user',
-        password: 'hashed-password',
-        id: 'user-id',
-        createdAt: new Date(),
-        role: Role['USER'],
-      });
+      userMockService.findOneByEmail.mockResolvedValue([
+        {
+          email: 'test@example.com',
+          password: 'hashed-password',
+          id: 'user-id',
+          createdAt: new Date(),
+          role: Role['USER'],
+        },
+      ]);
       const result = await service.authenticate(user);
       expect(result).toBeTruthy();
       expect(userMockService.findOneByEmail).toHaveBeenCalledWith(
@@ -72,13 +52,13 @@ describe('AuthService', () => {
     });
 
     it('should return null if user is not found', async () => {
-      userMockService.findOneByUsername.mockResolvedValue(null);
+      userMockService.findOneByEmail.mockResolvedValue([]);
       const result = await service.authenticate({
         identity: 'nonexistent-user',
         password: 'password',
       });
       expect(result).toBeNull();
-      expect(userMockService.findOneByUsername).toHaveBeenCalledWith(
+      expect(userMockService.findOneByEmail).toHaveBeenCalledWith(
         'nonexistent-user',
       );
     });
@@ -87,22 +67,21 @@ describe('AuthService', () => {
       const spy = jest
         .spyOn(bcrypt, 'compare')
         .mockResolvedValue(false as never);
-      userMockService.findOneByUsername.mockResolvedValue({
-        email: 'test@example.com',
-        username: 'test-user',
-        password: 'hashed-password',
-        id: 'user-id',
-        createdAt: new Date(),
-        role: Role['USER'],
-      });
+      userMockService.findOneByEmail.mockResolvedValue([
+        {
+          email: 'test@example.com',
+          password: 'hashed-password',
+          id: 'user-id',
+          createdAt: new Date(),
+          role: Role['USER'],
+        },
+      ]);
       const result = await service.authenticate({
         identity: 'test-user',
         password: 'wrong-password',
       });
       expect(result).toBeNull();
-      expect(userMockService.findOneByUsername).toHaveBeenCalledWith(
-        'test-user',
-      );
+      expect(userMockService.findOneByEmail).toHaveBeenCalledWith('test-user');
       expect(spy).toHaveBeenCalledWith('wrong-password', 'hashed-password');
     });
   });
@@ -111,7 +90,6 @@ describe('AuthService', () => {
     it('should return a JWT token for a valid user', async () => {
       const user: User = {
         email: 'test@example.com',
-        username: 'test-user',
         password: 'hashed-password',
         id: 'user-id',
         createdAt: new Date(),
@@ -124,7 +102,6 @@ describe('AuthService', () => {
       expect(result).toBe('jwt-token');
       expect(jwtMockService.signAsync).toHaveBeenCalledWith({
         sub: 'user-id',
-        username: 'test-user',
         role: Role['USER'],
       });
     });

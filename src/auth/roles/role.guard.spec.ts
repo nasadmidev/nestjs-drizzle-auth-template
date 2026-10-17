@@ -2,7 +2,7 @@ import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { RolesGuard } from './role.guard';
 import { Reflector } from '@nestjs/core';
 import { ExecutionContext } from '@nestjs/common/interfaces/features/execution-context.interface';
-import { Role } from '@/generated/prisma/enums';
+import { Role } from '@/db/schema';
 
 describe('RolesGuard', () => {
   const reflectorMock: DeepMockProxy<Reflector> = mockDeep<Reflector>();

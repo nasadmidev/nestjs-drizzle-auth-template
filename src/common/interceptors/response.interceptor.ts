@@ -35,7 +35,17 @@ export class ResponseInterceptor<T> implements NestInterceptor<
             path: `${req.method} ${req.path}`,
             date: new Date().toISOString(),
             data,
-          }
+          };
+        }
+
+        if (Array.isArray(data) && data.length === 1) {
+          return {
+            statusCode: res.statusCode,
+            path: `${req.method} ${req.path}`,
+            date: new Date().toISOString(),
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            data: data[0],
+          };
         }
 
         return {
@@ -43,7 +53,7 @@ export class ResponseInterceptor<T> implements NestInterceptor<
           path: `${req.method} ${req.path}`,
           date: new Date().toISOString(),
           data,
-        }
+        };
       }),
     );
   }

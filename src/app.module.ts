@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { type StringValue } from 'ms';
@@ -8,11 +7,17 @@ import { UserModule } from './user/user.module';
 import { HealthModule } from './health/health.module';
 import { JwtGuard } from './auth/jwt/jwt.guard';
 import { RolesGuard } from './auth/roles/role.guard';
+import { DrizzleModule } from '@nestjs/drizzle';
+import { drizzle } from 'drizzle-orm/node-postgres';
 
 @Module({
   imports: [
-    PrismaModule,
     ConfigModule.forRoot({ isGlobal: true }),
+    DrizzleModule.forRoot({
+      drizzle,
+      connection: process.env.DATABASE_URL!,
+      autoCloseConnection: true,
+    }),
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET,
