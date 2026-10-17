@@ -1,4 +1,10 @@
-import { ArgumentsHost, Catch, ExceptionFilter } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
 import { Response } from 'express';
 
@@ -61,8 +67,22 @@ export class DrizzleExceptionFilter
           message = exception.message || 'Internal server error';
       }
       return response.status(statusCode).json({ message });
+    }
+
+    if (exception instanceof HttpException) {
+      const status = exception.getStatus();
+      const errorResponse = exception.getResponse();
+      return response
+        .status(status)
+        .json(
+          typeof errorResponse === 'object'
+            ? errorResponse
+            : { message: errorResponse },
+        );
     } else {
-      super.catch(exception, host);
+      return response.status(HttpStatus['INTERNAL_SERVER_ERROR']).json({
+        message: exception.message || 'Internal Server Error',
+      });
     }
   }
 }
