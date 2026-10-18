@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ForbiddenException, ValidationPipe } from '@nestjs/common';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 import helmet, { type HelmetOptions } from 'helmet';
@@ -16,8 +16,12 @@ const corsOptions: CorsOptions = {
   credentials: true,
   origin: (o, cb) => {
     const whitelist = process.env.WHITELIST ?? null;
-    if (!o || !whitelist) {
+    if (!o) {
       return cb(null, true);
+    }
+
+    if (!whitelist) {
+      return cb(new ForbiddenException('Blocked by CORS Policy'), false);
     }
 
     if (
@@ -26,7 +30,7 @@ const corsOptions: CorsOptions = {
       return cb(null, true);
     }
 
-    return cb(new Error('Blocked by CORS Policy'), false);
+    return cb(new ForbiddenException('Blocked by CORS Policy'), false);
   },
 };
 
@@ -34,9 +38,9 @@ const helmetOptions: HelmetOptions = {
   contentSecurityPolicy: {
     directives: {
       defaultSrc: [`'self'`],
-      styleSrc: [`'self'`, `'unsafe-inline'`],
+      styleSrc: [`'self'`],
       imgSrc: [`'self'`, 'data:', 'validator.swagger.io'],
-      scriptSrc: [`'self'`, `https: 'unsafe-inline'`],
+      scriptSrc: [`'self'`],
     },
   },
 };

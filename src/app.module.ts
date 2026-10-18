@@ -8,15 +8,18 @@ import { HealthModule } from './health/health.module';
 import { JwtGuard } from './auth/jwt/jwt.guard';
 import { RolesGuard } from './auth/roles/role.guard';
 import { DrizzleModule } from '@nestjs/drizzle';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/pg-core';
+import ms from 'ms';
+import { relations } from './db/relations';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DrizzleModule.forRootAsync({
       useFactory: async () => {
-        const db = drizzle(process.env.DATABASE_URL!);
+        const db = drizzle(process.env.DATABASE_URL!, { relations });
         await migrate([], db, { migrationsFolder: '../drizzle' });
         return { db };
       },
@@ -28,11 +31,22 @@ import { migrate } from 'drizzle-orm/pg-core';
         expiresIn: (process.env.JWT_EXPIRES as StringValue) ?? '1h',
       },
     }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60000,
+        limit: ms('1m'),
+      },
+    ]),
     AuthModule,
     UserModule,
     HealthModule,
   ],
   providers: [
+    {
+      provide: 'APP_GUARD',
+      useClass: ThrottlerGuard,
+    },
     {
       provide: 'APP_GUARD',
       useClass: JwtGuard,

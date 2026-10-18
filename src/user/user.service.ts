@@ -1,15 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDrizzle } from '@nestjs/drizzle';
 import { eq } from 'drizzle-orm';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { users } from '@/db/schema';
+import { type DrizzleDatabase, users } from '@/db/schema';
 import { validateUUID } from '@/common/pipes/uuid-validator/uuid-validator.pipe';
 import { CreateUserDTO, UpdateUserDTO } from './user.dto';
 import { hash } from 'bcrypt';
 
 @Injectable()
 export class UserService {
-  constructor(@InjectDrizzle() private readonly drizzle: NodePgDatabase) {}
+  constructor(@InjectDrizzle() private readonly drizzle: DrizzleDatabase) {}
 
   async findAll() {
     return await this.drizzle.select().from(users);
@@ -28,7 +27,7 @@ export class UserService {
   }
 
   async create(data: CreateUserDTO) {
-    const parsedData = { ...data, password: await hash(data.password, 10) };
+    const parsedData = { ...data, password: await hash(data.password, 12) };
     return await this.drizzle.insert(users).values(parsedData).returning();
   }
 

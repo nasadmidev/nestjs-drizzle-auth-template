@@ -113,7 +113,7 @@ describe('UserService', () => {
     const result = await service.create(createUser);
     expect(result).toEqual([user]);
     expect(drizzleMock.insert).toHaveBeenCalled();
-    expect(spyHash).toHaveBeenCalledWith(createUser.password, 10);
+    expect(spyHash).toHaveBeenCalledWith(createUser.password, 12);
   });
 
   it('should delete a user', async () => {

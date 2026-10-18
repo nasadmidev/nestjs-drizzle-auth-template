@@ -1,22 +1,34 @@
 <p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+  <a href="http://nestjs.com/" target="_blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
 # NestJS Drizzle Template
 
 A production-ready NestJS template with Drizzle ORM, PostgreSQL, JWT authentication, role-based access control, and Swagger documentation.
+<p align="center">
+  <a><img src="https://img.shields.io/github/stars/nasadmidev/nestjs-drizzle-auth-template?style=for-the-badge"></img></a>
+  <a href="https://opensource.org/license/mit" target="_blank"><img src="https://img.shields.io/github/license/nasadmidev/nestjs-drizzle-auth-template?style=for-the-badge"></img></a>
+  <a href="https://orm.drizzle.team/" target="_blank"><img src="https://img.shields.io/badge/Drizzle-%23000000.svg?style=for-the-badge&logo=drizzle&logoColor=C5F74F"></img></a>
+  <a href="https://www.jwt.io/" target="_blank"><img src="https://img.shields.io/badge/json%20web%20tokens-%23000000.svg?style=for-the-badge&logo=jsonwebtokens&logoColor=white"></img></a>
+</p>
 
 ## Features
 
-- **NestJS 11** with TypeScript
+- **NestJS 12** with TypeScript `6.0.3`
 - **Drizzle ORM** with PostgreSQL
-- **JWT Authentication** with Passport (cookie & header support)
+- **JWT Authentication** with Passport (access & refresh tokens)
+- **Refresh Token Rotation** with database storage and hashing
 - **Role-Based Access Control** (USER, ADMIN roles)
+- **Rate Limiting** with `@nestjs/throttler`
+- **HTTP-only & Secure Cookies** for token storage
 - **Swagger/OpenAPI** documentation
 - **Docker Compose** for local development
 - **Testing** with Jest and mocking
 - **Validation** with class-validator and Zod
-- **Security** with Helmet, CORS
+- **Security** with Helmet, CORS, CSP
+
+> [!IMPORTANT]
+> Since `ts-jest` and `eslint-ts` do not support TypeScript 7.0, version 6.0.3 (the latest version supported by `eslint-ts`) is used.
 
 ## Prerequisites
 
@@ -43,19 +55,26 @@ pnpm run db:push
 
 ## Environment Variables
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory (see `.env.example` for reference):
 
 ```env
 # Database
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/nestjs?schema=public"
 
-# JWT
+# JWT Access Token
 JWT_SECRET="your-super-secret-key-change-in-production"
 JWT_EXPIRES="1h"
 
+# JWT Refresh Token
+REFRESH_TOKEN_SECRET="your-refresh-token-secret-key-change-in-production"
+REFRESH_TOKEN_EXPIRES="7d"
+
 # App
 PORT=3000
-WHITELIST=""
+NODE_ENV=development
+
+# CORS
+WHITELIST="http://localhost:3000,http://localhost:5173"
 ```
 
 ## Running the Application
@@ -79,28 +98,31 @@ http://localhost:3000/docs
 ### Available Endpoints
 
 #### Auth (`/auth`)
-| Method | Endpoint | Description | Public |
-|--------|----------|-------------|--------|
-| POST | `/auth/login/set-cookie` | Login with credentials (sets JWT in cookie) | Yes |
-| POST | `/auth/login` | Login with credentials (returns JWT in response) | Yes |
-| PUT | `/auth/regenerate` | Refresh JWT token | Yes |
+
+| Method | Endpoint                 | Description                                               | Public | Rate Limit |
+| ------ | ------------------------ | --------------------------------------------------------- | ------ | ---------- |
+| POST   | `/auth/login/set-cookie` | Login with credentials (sets tokens in httpOnly cookies)  | Yes    | 10 req/min |
+| POST   | `/auth/login`            | Login with credentials (returns tokens in response)       | Yes    | 10 req/min |
+| PUT    | `/auth/regenerate`       | Refresh access token using refresh token (body or cookie) | Yes    | 10 req/min |
 
 #### User (`/user`)
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/user` | Get current user | JWT |
-| GET | `/user/all` | Get all users (admin) | JWT+ADMIN |
-| GET | `/user/:id` | Get user by ID (admin) | JWT+ADMIN |
-| POST | `/user` | Create user | JWT |
-| PUT | `/user` | Update current user | JWT |
-| PUT | `/user/:id` | Update user (admin) | JWT+ADMIN |
-| DELETE | `/user` | Delete current user | JWT |
-| DELETE | `/user/:id` | Delete user (admin) | JWT+ADMIN |
+
+| Method | Endpoint    | Description            | Auth      |
+| ------ | ----------- | ---------------------- | --------- |
+| GET    | `/user`     | Get current user       | JWT       |
+| GET    | `/user/all` | Get all users (admin)  | JWT+ADMIN |
+| GET    | `/user/:id` | Get user by ID (admin) | JWT+ADMIN |
+| POST   | `/user`     | Create user            | JWT       |
+| PUT    | `/user`     | Update current user    | JWT       |
+| PUT    | `/user/:id` | Update user (admin)    | JWT+ADMIN |
+| DELETE | `/user`     | Delete current user    | JWT       |
+| DELETE | `/user/:id` | Delete user (admin)    | JWT+ADMIN |
 
 #### Health (`/health`)
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/health` | Basic health check | No |
+
+| Method | Endpoint  | Description        | Auth |
+| ------ | --------- | ------------------ | ---- |
+| GET    | `/health` | Basic health check | No   |
 
 ## Testing
 
@@ -147,8 +169,12 @@ src/
 │   ├── user.dto.ts
 │   └── user.module.ts
 ├── db/                # Database schema and configuration
-│   ├── schema.ts
+│   ├── schema.ts      # Database table definitions
+│   ├── relations.ts   # Drizzle ORM relations
 │   └── drizzle-exception/ # Exception filter for Drizzle errors
+├── health/            # Health check module
+│   ├── health.controller.ts
+│   └── health.module.ts
 ├── common/           # Shared utilities
 │   ├── pipes/        # Custom pipes
 │   └── interceptors/ # Custom interceptors
@@ -170,7 +196,72 @@ Follow the existing pattern:
 ### Adding a New Database Model
 
 1. Add table definition to `src/db/schema.ts`
-2. Run `pnpm run db:push`
+2. Add relations in `src/db/relations.ts` if needed
+3. Run `pnpm run db:generate` to create a migration
+4. Run `pnpm run db:migrate` to apply the migration
+
+### Database Schema
+
+The template includes the following tables:
+
+#### `users`
+
+- `id` (UUID, primary key)
+- `email` (text, unique, not null)
+- `role` (enum: USER/ADMIN, not null)
+- `password` (text, not null, bcrypt hashed)
+- `created_at` (timestamp, not null)
+
+#### `refresh_tokens`
+
+- `id` (UUID, primary key)
+- `user_id` (UUID, foreign key to users.id, CASCADE delete)
+- `token_hash` (text, SHA-256 hash of refresh token, not null)
+- `expires_at` (timestamp, not null)
+- `created_at` (timestamp, not null)
+
+## Security Features
+
+### Refresh Token Rotation
+
+The template implements a secure refresh token system:
+
+- **Database Storage**: Refresh tokens are stored in the `refresh_tokens` table with SHA-256 hashes
+- **Token Rotation**: Each refresh token is single-use - when used to generate a new access token, it's deleted and a new refresh token is issued
+- **Automatic Cleanup**: When a user is deleted, all their refresh tokens are automatically deleted (CASCADE foreign key)
+- **Expiration**: Refresh tokens expire after 7 days (configurable via `REFRESH_TOKEN_EXPIRES`)
+- **Flexible Usage**: Tokens can be sent via request body or httpOnly cookies
+
+### Rate Limiting
+
+The application uses `@nestjs/throttler` to prevent brute force attacks:
+
+- **Default limit**: 60 requests per minute globally
+- **Auth endpoints**: 10 requests per minute for login and token refresh
+- **Health endpoint**: Excluded from rate limiting
+
+### Cookie Security
+
+Tokens stored in cookies use these security settings:
+
+- **httpOnly**: Prevents XSS attacks by preventing JavaScript access
+- **secure**: Only sent over HTTPS in production
+- **sameSite**: 'lax' to prevent CSRF attacks while allowing normal navigation
+- **Path restriction**: Refresh token cookie is only sent to `/auth/regenerate` endpoint
+
+### Content Security Policy
+
+Helmet CSP is configured with:
+
+- **defaultSrc**: `'self'` - Only allow resources from same origin
+- **styleSrc**: `'self'` - No inline styles allowed
+- **scriptSrc**: `'self'` - No inline scripts allowed
+- **imgSrc**: `'self'`, `data:`, `validator.swagger.io` - Allow data URIs and Swagger validator
+
+### Password Hashing
+
+- **bcrypt** with cost factor of 12 for secure password hashing
+- Higher cost factor (12 vs default 10) for better security against brute force
 
 ## Exception Handling
 
@@ -191,6 +282,7 @@ To add your own exception filters without conflicts:
 4. The `DrizzleExceptionFilter` rethrows non-Drizzle errors, so it won't interfere with your custom filters
 
 Example:
+
 ```typescript
 @Catch(CustomException)
 export class CustomExceptionFilter implements ExceptionFilter {
@@ -202,4 +294,4 @@ export class CustomExceptionFilter implements ExceptionFilter {
 
 ## License
 
-MIT
+[MIT](https://opensource.org/license/mit)

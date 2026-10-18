@@ -1,24 +1,38 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService, JwtPayload } from './auth.service';
 import { UserService } from '@/user/user.service';
-import { JwtService, TokenExpiredError } from '@nestjs/jwt';
+import { JwtService, TokenExpiredError, JsonWebTokenError } from '@nestjs/jwt';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import bcrypt from 'bcrypt';
 import { Role, User } from '@/db/schema';
+import { getDrizzleToken } from '@nestjs/drizzle';
 
 describe('AuthService', () => {
   let service: AuthService;
   let userMockService: DeepMockProxy<UserService>;
   let jwtMockService: DeepMockProxy<JwtService>;
+  let drizzleMock: { [k: string]: jest.Mock };
 
   beforeEach(async () => {
     userMockService = mockDeep<UserService>();
     jwtMockService = mockDeep<JwtService>();
+    drizzleMock = {
+      select: jest.fn().mockReturnThis(),
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn(),
+      insert: jest.fn().mockReturnThis(),
+      values: jest.fn().mockReturnThis(),
+      delete: jest.fn().mockReturnThis(),
+    };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: UserService, useValue: userMockService },
         { provide: JwtService, useValue: jwtMockService },
+        {
+          provide: getDrizzleToken(),
+          useValue: drizzleMock,
+        },
       ],
     }).compile();
 
@@ -99,7 +113,10 @@ describe('AuthService', () => {
       jwtMockService.signAsync.mockResolvedValue('jwt-token');
 
       const result = await service.login(user);
-      expect(result).toBe('jwt-token');
+      expect(result).toEqual({
+        accessToken: 'jwt-token',
+        refreshToken: 'jwt-token',
+      });
       expect(jwtMockService.signAsync).toHaveBeenCalledWith({
         sub: 'user-id',
         role: Role['USER'],
@@ -113,7 +130,6 @@ describe('AuthService', () => {
 
   describe('regenerate token', () => {
     const payloadData: JwtPayload = {
-      username: 'test',
       role: Role['USER'],
       sub: 'id-123',
     };
@@ -127,27 +143,60 @@ describe('AuthService', () => {
     it('should regenerate token', async () => {
       jwtMockService.verifyAsync.mockResolvedValue(mockPayload);
       jwtMockService.signAsync.mockResolvedValue('new-token');
+      
+      drizzleMock.select.mockReturnValueOnce({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockResolvedValue([{ id: 'token-id' }]),
+        }),
+      });
+      
+      drizzleMock.delete.mockReturnValueOnce({
+        where: jest.fn().mockResolvedValue(undefined),
+      });
+
+      drizzleMock.insert.mockReturnValueOnce({
+        values: jest.fn().mockResolvedValue(undefined),
+      });
+
       const result = await service.regenerateToken('token');
-      expect(result).toBe('new-token');
-      expect(jwtMockService.verifyAsync).toHaveBeenCalledWith('token');
-      expect(jwtMockService.signAsync).toHaveBeenCalledWith(payloadData);
+      expect(result).toEqual({
+        refreshToken: 'new-token',
+        accessToken: 'new-token',
+      });
+      expect(jwtMockService.verifyAsync).toHaveBeenCalledWith('token', {
+        secret: process.env.REFRESH_TOKEN_SECRET,
+      });
     });
 
-    it('should throw a ForbiddenException', async () => {
+    it('should throw a BadRequestException on expired token', async () => {
       const date = new Date();
       jwtMockService.verifyAsync.mockRejectedValue(
         new TokenExpiredError('', date),
       );
 
       await expect(service.regenerateToken('token')).rejects.toThrow(
-        `Token expired: ${date.toISOString()}`,
+        'Refresh token expired',
       );
     });
 
-    it('should return null on non-jwt error', async () => {
-      jwtMockService.verifyAsync.mockRejectedValue(new Error('Unknown error'));
-      const result = await service.regenerateToken('token');
-      expect(result).toBe(null);
+    it('should throw a ForbiddenException on invalid token', async () => {
+      jwtMockService.verifyAsync.mockRejectedValue(
+        new JsonWebTokenError('Invalid token'),
+      );
+
+      await expect(service.regenerateToken('token')).rejects.toThrow(
+        'Invalid JSON Web Token',
+      );
+    });
+
+    it('should throw UnauthorizedException on unknown error', async () => {
+      jwtMockService.verifyAsync.mockRejectedValue(
+        new Error('Unknown error'),
+      );
+
+      await expect(service.regenerateToken('token')).rejects.toThrow(
+        'Unauthorized',
+      );
     });
   });
 });

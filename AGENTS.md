@@ -31,6 +31,36 @@ The project uses a `DrizzleExceptionFilter` to handle PostgreSQL errors from Dri
 
 Unknown PostgreSQL codes are delegated to `BaseExceptionFilter`.
 
+## Security Features
+
+### Refresh Token System
+
+The project implements a secure refresh token rotation system:
+
+- **Storage**: Refresh tokens are stored in the `refresh_tokens` table with SHA-256 hashes
+- **Rotation**: Each refresh token is single-use - when used, it's deleted and a new one is issued
+- **Foreign Key**: `refresh_tokens.user_id` references `users.id` with CASCADE delete
+- **Expiration**: Configurable via `REFRESH_TOKEN_EXPIRES` (default: 7 days)
+- **Usage**: Tokens can be sent via request body or httpOnly cookies
+
+### Rate Limiting
+
+- Global rate limiting using `@nestjs/throttler`
+- Default: 60 requests per minute
+- Auth endpoints: 10 requests per minute
+- Health endpoint: Excluded from rate limiting
+
+### Cookie Security
+
+- **httpOnly**: Prevents XSS attacks
+- **secure**: Only sent over HTTPS in production
+- **sameSite**: 'lax' to prevent CSRF
+- **Path restriction**: Refresh token cookie only sent to `/auth/regenerate`
+
+### Password Hashing
+
+- bcrypt with cost factor 12 (higher than default 10 for better security)
+
 ## Build and Test Commands
 
 ```bash
@@ -55,9 +85,11 @@ pnpm run db:reset          # Drop and reset database
 
 ## Technology Stack
 
-- NestJS 11 with TypeScript
-- Drizzle ORM with PostgreSQL
-- JWT Authentication with Passport
+- NestJS 12 with TypeScript
+- Drizzle ORM 1.0.0-rc.4 with PostgreSQL
+- JWT Authentication with Passport (access & refresh tokens)
+- @nestjs/throttler for rate limiting
+- Helmet for security headers and CSP
 - Swagger/OpenAPI documentation
 - Docker Compose for local development
 - Jest for testing

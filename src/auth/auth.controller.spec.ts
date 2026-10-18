@@ -3,21 +3,30 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { AuthGuard } from '@nestjs/passport';
+import { HttpAdapterHost } from '@nestjs/core';
 import type { Request, Response } from 'express';
 import { User, Role } from '@/db/schema';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let mockAuthService: DeepMockProxy<AuthService>;
+  let mockHttpAdapterHost: DeepMockProxy<HttpAdapterHost>;
 
   beforeEach(async () => {
     mockAuthService = mockDeep<AuthService>();
+    mockHttpAdapterHost = mockDeep<HttpAdapterHost>();
+    mockHttpAdapterHost.httpAdapter.setCookie.mockImplementation(() => {});
+    
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
         {
           provide: AuthService,
           useValue: mockAuthService,
+        },
+        {
+          provide: HttpAdapterHost,
+          useValue: mockHttpAdapterHost,
         },
       ],
     })
@@ -36,7 +45,10 @@ describe('AuthController', () => {
 
   describe('login controller', () => {
     it('should return jwt-token', async () => {
-      mockAuthService.login.mockResolvedValue('jwt-token');
+      mockAuthService.login.mockResolvedValue({
+        accessToken: 'jwt-token',
+        refreshToken: 'refresh-token',
+      });
       const mockReq = {
         user: {
           id: 'user-id',
@@ -50,11 +62,17 @@ describe('AuthController', () => {
         mockReq as Request & { user?: User },
       );
       expect(mockAuthService.login).toHaveBeenCalledWith(mockReq.user);
-      expect(result).toBe('jwt-token');
+      expect(result).toEqual({
+        accessToken: 'jwt-token',
+        refreshToken: 'refresh-token',
+      });
     });
 
     it('should call authService.login with the user', async () => {
-      mockAuthService.login.mockResolvedValue('jwt-token');
+      mockAuthService.login.mockResolvedValue({
+        accessToken: 'jwt-token',
+        refreshToken: 'refresh-token',
+      });
       const mockReq = {
         user: {
           id: 'user-id',
@@ -76,9 +94,41 @@ describe('AuthController', () => {
 
   describe('regenerate', () => {
     it('return a regenerated token', async () => {
-      mockAuthService.regenerateToken.mockResolvedValue('new-token');
-      const result = await controller.regenerateToken('token');
-      expect(result).toBe('new-token');
+      mockAuthService.regenerateToken.mockResolvedValue({
+        accessToken: 'new-token',
+        refreshToken: 'new-refresh-token',
+      });
+      const mockRes = mockDeep<Response>();
+      const result = await controller.regenerateToken(
+        mockRes,
+        'token',
+        undefined,
+      );
+      expect(result).toEqual({
+        accessToken: 'new-token',
+        refreshToken: 'new-refresh-token',
+      });
+    });
+
+    it('return a regenerated token from cookie', async () => {
+      mockAuthService.regenerateToken.mockResolvedValue({
+        accessToken: 'new-token',
+        refreshToken: 'new-refresh-token',
+      });
+      const mockRes = mockDeep<Response>();
+      const result = await controller.regenerateToken(
+        mockRes,
+        undefined,
+        'cookie-token',
+      );
+      expect(result).toEqual({ message: 'Token refreshed' });
+    });
+
+    it('should throw BadRequestException when no token provided', async () => {
+      const mockRes = mockDeep<Response>();
+      await expect(
+        controller.regenerateToken(mockRes, undefined, undefined),
+      ).rejects.toThrow('No refresh token defined');
     });
   });
 });
