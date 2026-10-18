@@ -3,8 +3,8 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { AuthGuard } from '@nestjs/passport';
-import type { Request } from 'express';
-import { Role } from '@/db/schema';
+import type { Request, Response } from 'express';
+import { User, Role } from '@/db/schema';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -35,6 +35,24 @@ describe('AuthController', () => {
   });
 
   describe('login controller', () => {
+    it('should return jwt-token', async () => {
+      mockAuthService.login.mockResolvedValue('jwt-token');
+      const mockReq = {
+        user: {
+          id: 'user-id',
+          email: 'user@user.com',
+          role: Role['USER'],
+          password: 'hashed',
+          createdAt: new Date(),
+        },
+      } as Partial<Request>;
+      const result = await controller.loginWithoutCookie(
+        mockReq as Request & { user?: User },
+      );
+      expect(mockAuthService.login).toHaveBeenCalledWith(mockReq.user);
+      expect(result).toBe('jwt-token');
+    });
+
     it('should call authService.login with the user', async () => {
       mockAuthService.login.mockResolvedValue('jwt-token');
       const mockReq = {
@@ -46,9 +64,13 @@ describe('AuthController', () => {
           createdAt: new Date(),
         },
       } as Partial<Request>;
-      const result = await controller.login(mockReq as Request);
+      const mockRes = mockDeep<Response>();
+      const result = await controller.login(
+        mockReq as Request & { user?: User },
+        mockRes,
+      );
       expect(mockAuthService.login).toHaveBeenCalledWith(mockReq.user);
-      expect(result).toBe('jwt-token');
+      expect(result).toEqual({ message: 'Logged in successfully' });
     });
   });
 

@@ -3,31 +3,36 @@ import {
   Catch,
   ExceptionFilter,
   HttpException,
-  HttpStatus,
 } from '@nestjs/common';
-import { BaseExceptionFilter } from '@nestjs/core';
 import { Response } from 'express';
 
 @Catch()
-export class DrizzleExceptionFilter
-  extends BaseExceptionFilter
-  implements ExceptionFilter
-{
-  catch(exception: { [k: string]: string }, host: ArgumentsHost) {
+export class DrizzleExceptionFilter implements ExceptionFilter {
+  catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    let statusCode: number;
-    let message: string;
+    if (exception instanceof HttpException) {
+      throw exception;
+    }
 
-    if (exception?.code) {
-      switch (exception.code) {
+    const drizzleError = exception as {
+      code?: string;
+      column?: string;
+      message?: string;
+    };
+
+    if (drizzleError?.code) {
+      let statusCode: number;
+      let message: string;
+
+      switch (drizzleError.code) {
         case '23505':
           statusCode = 409;
           message = 'Unique constraint failed';
           break;
         case '23502':
           statusCode = 409;
-          message = `Null constraint violation on column: ${exception.column || 'unknown'}`;
+          message = `Null constraint violation on column: ${drizzleError.column || 'unknown'}`;
           break;
         case '23503':
           statusCode = 400;
@@ -63,26 +68,11 @@ export class DrizzleExceptionFilter
           message = 'SQL syntax error or query parsing failed';
           break;
         default:
-          statusCode = 500;
-          message = exception.message || 'Internal server error';
+          throw exception;
       }
       return response.status(statusCode).json({ message });
     }
 
-    if (exception instanceof HttpException) {
-      const status = exception.getStatus();
-      const errorResponse = exception.getResponse();
-      return response
-        .status(status)
-        .json(
-          typeof errorResponse === 'object'
-            ? errorResponse
-            : { message: errorResponse },
-        );
-    } else {
-      return response.status(HttpStatus['INTERNAL_SERVER_ERROR']).json({
-        message: exception.message || 'Internal Server Error',
-      });
-    }
+    throw exception;
   }
 }

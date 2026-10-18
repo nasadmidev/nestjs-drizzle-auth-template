@@ -172,6 +172,34 @@ Follow the existing pattern:
 1. Add table definition to `src/db/schema.ts`
 2. Run `pnpm run db:push`
 
+## Exception Handling
+
+This template includes a `DrizzleExceptionFilter` that handles PostgreSQL database errors from Drizzle ORM. The filter:
+
+- **Catches all exceptions** but only handles Drizzle/PostgreSQL errors (errors with a PostgreSQL error code)
+- **Rethrows `HttpException`** to let NestJS handle it with its default behavior
+- **Rethrows non-Drizzle errors** to allow other custom filters to handle them
+- **Maps common PostgreSQL error codes** to appropriate HTTP status codes (e.g., 23505 → 409 Conflict)
+
+### Adding Custom Exception Filters
+
+To add your own exception filters without conflicts:
+
+1. Create your filter class implementing `ExceptionFilter`
+2. Register it in `main.ts` with `app.useGlobalFilters(new YourFilter())`
+3. Order matters: filters are executed in the order they are registered
+4. The `DrizzleExceptionFilter` rethrows non-Drizzle errors, so it won't interfere with your custom filters
+
+Example:
+```typescript
+@Catch(CustomException)
+export class CustomExceptionFilter implements ExceptionFilter {
+  catch(exception: CustomException, host: ArgumentsHost) {
+    // Your custom handling
+  }
+}
+```
+
 ## License
 
 MIT
