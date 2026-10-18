@@ -6,10 +6,12 @@
 
 A production-ready NestJS template with Drizzle ORM, PostgreSQL, JWT authentication, role-based access control, and Swagger documentation.
 <p align="center">
-  <a><img src="https://img.shields.io/github/stars/nasadmidev/nestjs-drizzle-auth-template?style=for-the-badge"></img></a>
+  <img src="https://img.shields.io/github/stars/nasadmidev/nestjs-drizzle-auth-template?style=for-the-badge"></img>
   <a href="https://opensource.org/license/mit" target="_blank"><img src="https://img.shields.io/github/license/nasadmidev/nestjs-drizzle-auth-template?style=for-the-badge"></img></a>
   <a href="https://orm.drizzle.team/" target="_blank"><img src="https://img.shields.io/badge/Drizzle-%23000000.svg?style=for-the-badge&logo=drizzle&logoColor=C5F74F"></img></a>
   <a href="https://www.jwt.io/" target="_blank"><img src="https://img.shields.io/badge/json%20web%20tokens-%23000000.svg?style=for-the-badge&logo=jsonwebtokens&logoColor=white"></img></a>
+  <a href="https://www.postgresql.org/" target="_blank"><img src="https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white"></img></a>
+  <a href="https://swagger.io/" target="_blank"><img src="https://img.shields.io/badge/Swagger-%2385EA2D.svg?style=for-the-badge&logo=swagger&logoColor=black"></img></a>
 </p>
 
 ## Features
