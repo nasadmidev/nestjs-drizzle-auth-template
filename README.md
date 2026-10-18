@@ -20,6 +20,7 @@ A production-ready NestJS template with Drizzle ORM, PostgreSQL, JWT authenticat
 - **Drizzle ORM** with PostgreSQL
 - **JWT Authentication** with Passport (access & refresh tokens)
 - **Refresh Token Rotation** with database storage and hashing
+- **Automatic Token Cleanup** with scheduled tasks
 - **Role-Based Access Control** (USER, ADMIN roles)
 - **Rate Limiting** with `@nestjs/throttler`
 - **HTTP-only & Secure Cookies** for token storage
@@ -162,6 +163,7 @@ src/
 │   ├── jwt/           # JWT strategy and guards
 │   ├── roles/         # Role-based access control
 │   ├── strategies/    # Passport strategies
+│   ├── token-cleanup/ # Scheduled token cleanup service
 │   ├── auth.controller.ts
 │   ├── auth.service.ts
 │   └── auth.module.ts
@@ -210,7 +212,7 @@ The template includes the following tables:
 
 - `id` (UUID, primary key)
 - `email` (text, unique, not null)
-- `role` (enum: USER/ADMIN, not null)
+- `role` (enum: USER/ADMIN, not null) - defined by exported `roleEnum`
 - `password` (text, not null, bcrypt hashed)
 - `created_at` (timestamp, not null)
 
@@ -221,6 +223,8 @@ The template includes the following tables:
 - `token_hash` (text, SHA-256 hash of refresh token, not null)
 - `expires_at` (timestamp, not null)
 - `created_at` (timestamp, not null)
+
+**Note**: The `roleEnum` is exported from `src/db/schema.ts` and can be used in queries and validations throughout the application.
 
 ## Security Features
 
@@ -233,6 +237,15 @@ The template implements a secure refresh token system:
 - **Automatic Cleanup**: When a user is deleted, all their refresh tokens are automatically deleted (CASCADE foreign key)
 - **Expiration**: Refresh tokens expire after 7 days (configurable via `REFRESH_TOKEN_EXPIRES`)
 - **Flexible Usage**: Tokens can be sent via request body or httpOnly cookies
+
+### Automatic Token Cleanup
+
+The `TokenCleanupService` runs as a scheduled task to maintain database hygiene:
+
+- **Schedule**: Runs every day at 1 AM seconds using `@nestjs/schedule`
+- **Function**: Deletes expired refresh tokens from the database
+- **Logging**: Logs the number and IDs of deleted tokens for monitoring
+- **Efficiency**: Uses database-level filtering for optimal performance
 
 ### Rate Limiting
 

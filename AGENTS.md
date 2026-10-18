@@ -43,6 +43,15 @@ The project implements a secure refresh token rotation system:
 - **Expiration**: Configurable via `REFRESH_TOKEN_EXPIRES` (default: 7 days)
 - **Usage**: Tokens can be sent via request body or httpOnly cookies
 
+### Automatic Token Cleanup
+
+The `TokenCleanupService` uses `@nestjs/schedule` to clean expired tokens:
+
+- **Schedule**: Runs every 30 seconds using `@Cron(CronExpression.EVERY_30_SECONDS)`
+- **Cleanup**: Deletes refresh tokens where `expiresAt < now()`
+- **Logging**: Logs deleted token IDs for monitoring
+- **Location**: `src/auth/token-cleanup/token-cleanup.service.ts`
+
 ### Rate Limiting
 
 - Global rate limiting using `@nestjs/throttler`

@@ -13,6 +13,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/pg-core';
 import ms from 'ms';
 import { relations } from './db/relations';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { relations } from './db/relations';
         limit: ms('1m'),
       },
     ]),
+    ScheduleModule.forRoot(),
     AuthModule,
     UserModule,
     HealthModule,

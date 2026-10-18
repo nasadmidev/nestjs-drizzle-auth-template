@@ -7,7 +7,7 @@ export enum Role {
   ADMIN = 'ADMIN',
 }
 
-const roleEnum = pgEnum('role', Role);
+export const roleEnum = pgEnum('role', Role);
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().notNull().primaryKey(),

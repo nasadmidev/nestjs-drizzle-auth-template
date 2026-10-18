@@ -10,7 +10,7 @@ export const relations = defineRelations(schema, (r) => ({
   refreshTokens: {
     refreshTokens_userId: r.one.users({
       from: r.refreshTokens.userId,
-      to: r.users.id
+      to: r.users.id,
     }),
-  }
+  },
 }));
