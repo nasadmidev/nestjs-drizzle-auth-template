@@ -1,5 +1,5 @@
 import { DrizzleExceptionFilter } from './drizzle-exception.filter';
-import { ArgumentsHost, HttpException } from '@nestjs/common';
+import { ArgumentsHost, HttpException, InternalServerErrorException } from '@nestjs/common';
 import { Response } from 'express';
 
 describe('DrizzleExceptionFilter', () => {
@@ -17,6 +17,7 @@ describe('DrizzleExceptionFilter', () => {
     const mockHost = {
       switchToHttp: jest.fn().mockReturnValue({
         getResponse: jest.fn().mockReturnValue(mockResponse),
+        getRequest: jest.fn().mockReturnValue({}),
       }),
     } as unknown as ArgumentsHost;
 
@@ -39,7 +40,7 @@ describe('DrizzleExceptionFilter', () => {
     });
   });
 
-  it('should rethrow HttpException to let NestJS handle it', () => {
+  it('should handle HttpException by returning its response', () => {
     const filter = new DrizzleExceptionFilter();
     const mockResponse = {
       status: jest.fn().mockReturnThis(),
@@ -49,16 +50,17 @@ describe('DrizzleExceptionFilter', () => {
     const mockHost = {
       switchToHttp: jest.fn().mockReturnValue({
         getResponse: jest.fn().mockReturnValue(mockResponse),
+        getRequest: jest.fn().mockReturnValue({}),
       }),
     } as unknown as ArgumentsHost;
 
     const httpException = new HttpException('Not found', 404);
-    expect(() => filter.catch(httpException, mockHost)).toThrow(httpException);
-    expect(mockResponse.status).not.toHaveBeenCalled();
-    expect(mockResponse.json).not.toHaveBeenCalled();
+    filter.catch(httpException, mockHost);
+    expect(mockResponse.status).toHaveBeenCalledWith(404);
+    expect(mockResponse.json).toHaveBeenCalledWith(httpException.getResponse());
   });
 
-  it('should rethrow errors without a code property (non-Drizzle errors)', () => {
+  it('should wrap errors without a code property (non-Drizzle errors) in InternalServerErrorException', () => {
     const filter = new DrizzleExceptionFilter();
     const mockResponse = {
       status: jest.fn().mockReturnThis(),
@@ -68,17 +70,20 @@ describe('DrizzleExceptionFilter', () => {
     const mockHost = {
       switchToHttp: jest.fn().mockReturnValue({
         getResponse: jest.fn().mockReturnValue(mockResponse),
+        getRequest: jest.fn().mockReturnValue({}),
       }),
     } as unknown as ArgumentsHost;
 
     // Test error without code (non-Drizzle error)
     const genericError = new Error('Generic error');
-    expect(() => filter.catch(genericError, mockHost)).toThrow(genericError);
+    expect(() => filter.catch(genericError, mockHost)).toThrow(
+      InternalServerErrorException,
+    );
     expect(mockResponse.status).not.toHaveBeenCalled();
     expect(mockResponse.json).not.toHaveBeenCalled();
   });
 
-  it('should rethrow errors with unknown PostgreSQL codes', () => {
+  it('should wrap errors with unknown PostgreSQL codes in InternalServerErrorException', () => {
     const filter = new DrizzleExceptionFilter();
     const mockResponse = {
       status: jest.fn().mockReturnThis(),
@@ -88,13 +93,37 @@ describe('DrizzleExceptionFilter', () => {
     const mockHost = {
       switchToHttp: jest.fn().mockReturnValue({
         getResponse: jest.fn().mockReturnValue(mockResponse),
+        getRequest: jest.fn().mockReturnValue({}),
       }),
     } as unknown as ArgumentsHost;
 
     // Test unknown PostgreSQL code
     const unknownCodeError = { code: '99999', message: 'Unknown error' };
     expect(() => filter.catch(unknownCodeError, mockHost)).toThrow(
-      unknownCodeError as unknown as string,
+      InternalServerErrorException,
+    );
+    expect(mockResponse.status).not.toHaveBeenCalled();
+    expect(mockResponse.json).not.toHaveBeenCalled();
+  });
+
+  it('should wrap unknown error types in InternalServerErrorException', () => {
+    const filter = new DrizzleExceptionFilter();
+    const mockResponse = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn().mockReturnThis(),
+    } as unknown as Response;
+
+    const mockHost = {
+      switchToHttp: jest.fn().mockReturnValue({
+        getResponse: jest.fn().mockReturnValue(mockResponse),
+        getRequest: jest.fn().mockReturnValue({}),
+      }),
+    } as unknown as ArgumentsHost;
+
+    // Test unknown error type (not an Error instance)
+    const unknownError = 'string error';
+    expect(() => filter.catch(unknownError, mockHost)).toThrow(
+      InternalServerErrorException,
     );
     expect(mockResponse.status).not.toHaveBeenCalled();
     expect(mockResponse.json).not.toHaveBeenCalled();

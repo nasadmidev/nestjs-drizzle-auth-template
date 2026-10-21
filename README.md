@@ -107,19 +107,21 @@ http://localhost:3000/docs
 | POST   | `/auth/login/set-cookie` | Login with credentials (sets tokens in httpOnly cookies)  | Yes    | 10 req/min |
 | POST   | `/auth/login`            | Login with credentials (returns tokens in response)       | Yes    | 10 req/min |
 | PUT    | `/auth/regenerate`       | Refresh access token using refresh token (body or cookie) | Yes    | 10 req/min |
+| POST   | `/auth/register`         | Register a new user (returns tokens in cookies or JSON)   | Yes    | 10 req/min |
+| DELETE | `/auth/logout`           | Logout (clears cookies)                                    | No     | N/A        |
 
 #### User (`/user`)
 
-| Method | Endpoint    | Description            | Auth      |
-| ------ | ----------- | ---------------------- | --------- |
-| GET    | `/user`     | Get current user       | JWT       |
-| GET    | `/user/all` | Get all users (admin)  | JWT+ADMIN |
-| GET    | `/user/:id` | Get user by ID (admin) | JWT+ADMIN |
-| POST   | `/user`     | Create user            | JWT       |
-| PUT    | `/user`     | Update current user    | JWT       |
-| PUT    | `/user/:id` | Update user (admin)    | JWT+ADMIN |
-| DELETE | `/user`     | Delete current user    | JWT       |
-| DELETE | `/user/:id` | Delete user (admin)    | JWT+ADMIN |
+| Method | Endpoint    | Description                    | Auth      |
+| ------ | ----------- | ------------------------------ | --------- |
+| GET    | `/user`     | Get current user               | JWT       |
+| GET    | `/user/all` | Get all users (admin)          | JWT+ADMIN |
+| GET    | `/user/:id` | Get user by ID (admin)         | JWT+ADMIN |
+| POST   | `/user`     | Create user (admin only)       | JWT+ADMIN |
+| PUT    | `/user`     | Update current user            | JWT       |
+| PUT    | `/user/:id` | Update user (admin)            | JWT+ADMIN |
+| DELETE | `/user`     | Delete current user            | JWT       |
+| DELETE | `/user/:id` | Delete user (admin)            | JWT+ADMIN |
 
 #### Health (`/health`)
 
@@ -228,6 +230,15 @@ The template includes the following tables:
 
 ## Security Features
 
+### User Registration
+
+The template implements a secure user registration system:
+
+- **Public Registration**: The `/auth/register` endpoint allows public user registration with a fixed `USER` role
+- **Token Delivery**: Registration can return tokens via cookies (for web apps) or JSON (for other clients) using the `?type=cookies` or `?type=json` query parameter
+- **Admin User Creation**: Only users with `ADMIN` role can create users with custom roles via the `/user` endpoint
+- **Role Isolation**: This design prevents privilege escalation by ensuring only administrators can create users with elevated roles
+
 ### Refresh Token Rotation
 
 The template implements a secure refresh token system:
@@ -283,8 +294,8 @@ Helmet CSP is configured with:
 This template includes a `DrizzleExceptionFilter` that handles PostgreSQL database errors from Drizzle ORM. The filter:
 
 - **Catches all exceptions** but only handles Drizzle/PostgreSQL errors (errors with a PostgreSQL error code)
-- **Rethrows `HttpException`** to let NestJS handle it with its default behavior
-- **Rethrows non-Drizzle errors** to allow other custom filters to handle them
+- **Handles `HttpException` directly** by returning the response with the appropriate status code and body, preventing console error logging
+- **Wraps non-Drizzle errors** in `InternalServerErrorException` so NestJS handles them with standard error handling, preventing raw errors from being logged to the console
 - **Maps common PostgreSQL error codes** to appropriate HTTP status codes (e.g., 23505 → 409 Conflict)
 
 ### Adding Custom Exception Filters
@@ -294,7 +305,7 @@ To add your own exception filters without conflicts:
 1. Create your filter class implementing `ExceptionFilter`
 2. Register it in `main.ts` with `app.useGlobalFilters(new YourFilter())`
 3. Order matters: filters are executed in the order they are registered
-4. The `DrizzleExceptionFilter` rethrows non-Drizzle errors, so it won't interfere with your custom filters
+4. The `DrizzleExceptionFilter` wraps non-Drizzle errors in `InternalServerErrorException`, so they flow through NestJS's standard error pipeline and won't interfere with your custom filters
 
 Example:
 

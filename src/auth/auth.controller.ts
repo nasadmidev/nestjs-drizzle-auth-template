@@ -8,16 +8,31 @@ import {
   Res,
   Cookies,
   BadRequestException,
+  Delete,
+  HttpStatus,
+  Query,
+  HttpCode,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
-import { User } from '@/db/schema';
+import { Role, User } from '@/db/schema';
 import { Public } from './jwt/public.decorator';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+  PickType,
+} from '@nestjs/swagger';
 import ms, { StringValue } from 'ms';
 import { Throttle } from '@nestjs/throttler';
 import { HttpAdapterHost } from '@nestjs/core';
+import { UserService } from '@/user/user.service';
+import { CreateUserDTO } from '@/user/user.dto';
+
+class RegisterUserDTO extends PickType(CreateUserDTO, ['email', 'password']) {}
 
 @ApiTags('auth')
 @Controller('auth')
@@ -25,6 +40,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly adapterHost: HttpAdapterHost,
+    private readonly userService: UserService,
   ) {}
 
   private setTokensCookies(
@@ -99,7 +115,16 @@ export class AuthController {
   @Public()
   @Put('regenerate')
   @ApiOperation({ summary: 'Regenerate access token using refresh token' })
-  @ApiResponse({ status: 200, description: 'New JWT token' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Set a new JWT access_token and refresh_token using Set-Header',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Return JWT accessToken and refreshToken in JSON response body',
+  })
   @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
   async regenerateToken(
     @Res({ passthrough: true }) response: Response,
@@ -118,5 +143,63 @@ export class AuthController {
     }
 
     throw new BadRequestException('No refresh token defined');
+  }
+
+  @Delete('logout')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Delete refresh_token and access_token from cookies',
+  })
+  @ApiResponse({ status: 200, description: 'Token deleted from cookies' })
+  logout(@Res({ passthrough: true }) response: Response) {
+    this.adapterHost.httpAdapter.clearCookie(response, 'refresh_token');
+    this.adapterHost.httpAdapter.clearCookie(response, 'access_token');
+    return { message: 'Logout successfully' };
+  }
+
+  @Post('register')
+  @Throttle({ default: { limit: 10, ttl: ms('1m') } })
+  @Public()
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiQuery({
+    name: 'type',
+    enum: ['cookies', 'json'],
+    description: 'Specify how to return the tokens, like Set-Cookie or JSON',
+  })
+  @ApiResponse({ status: 201, description: 'New user created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({
+    status: HttpStatus['CONFLICT'],
+    description: 'A user with a constraint key already exists',
+  })
+  @HttpCode(HttpStatus['CREATED'])
+  async register(
+    @Res({ passthrough: true }) response: Response,
+    @Body() data: RegisterUserDTO,
+    @Query('type') type?: 'cookies' | 'json',
+  ) {
+    if (type === 'cookies') {
+      const user = (
+        await this.userService.create({
+          ...data,
+          role: Role['USER'],
+        })
+      )[0];
+      const { refreshToken, accessToken } = await this.authService.login(user);
+      this.setTokensCookies(refreshToken, accessToken, response);
+      return { message: 'Registration successfully' };
+    }
+
+    if (type === 'json') {
+      const user = (
+        await this.userService.create({
+          ...data,
+          role: Role['USER'],
+        })
+      )[0];
+      return await this.authService.login(user);
+    }
+
+    throw new BadRequestException('You must specify how to return the tokens');
   }
 }

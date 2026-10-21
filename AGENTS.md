@@ -8,13 +8,15 @@ The project uses a `DrizzleExceptionFilter` to handle PostgreSQL errors from Dri
 
 1. **Selective Error Handling**: The filter uses `@Catch()` to catch all exceptions but only handles errors with a PostgreSQL error code (`exception.code`).
 
-2. **HttpException Rethrow**: The filter explicitly checks for `HttpException` and rethrows it to let NestJS handle it with its default behavior.
+2. **HttpException Direct Handling**: The filter explicitly checks for `HttpException` and handles it directly by returning the response with the appropriate status code and body, preventing it from being logged to the console as an error.
 
-3. **Non-Drizzle Error Rethrow**: Errors without a PostgreSQL code or with unknown codes are rethrown, allowing other custom filters to handle them.
+3. **Non-Drizzle Error Wrapping**: Errors without a PostgreSQL code or with unknown codes are wrapped in `InternalServerErrorException` and thrown, allowing NestJS to handle them with its standard error handling. This prevents raw errors from being logged to the console.
 
-4. **No Extension of BaseExceptionFilter**: The filter implements `ExceptionFilter` directly instead of extending `BaseExceptionFilter` to avoid type issues and simplify testing.
+4. **Unknown PostgreSQL Code Logging**: When an unknown PostgreSQL error code is encountered, the filter logs a warning with the error code before wrapping it in `InternalServerErrorException` for debugging purposes.
 
-5. **No Conflict with Other Filters**: By rethrowing non-Drizzle errors, custom exception filters added by developers will work without interference.
+5. **No Extension of BaseExceptionFilter**: The filter implements `ExceptionFilter` directly instead of extending `BaseExceptionFilter` to avoid type issues and simplify testing.
+
+6. **No Conflict with Other Filters**: By wrapping non-Drizzle errors in `InternalServerErrorException`, they are handled by NestJS's standard error pipeline, allowing other custom filters to work without interference.
 
 ### PostgreSQL Error Codes Handled
 
@@ -32,6 +34,16 @@ The project uses a `DrizzleExceptionFilter` to handle PostgreSQL errors from Dri
 Unknown PostgreSQL codes are delegated to `BaseExceptionFilter`.
 
 ## Security Features
+
+### User Registration System
+
+The project implements a secure user registration system with role-based access control:
+
+- **Public Registration**: The `/auth/register` endpoint allows public user registration with a fixed `USER` role
+- **Token Delivery Options**: Registration can return tokens via cookies (for web apps) or JSON (for other clients) using the `?type=cookies` or `?type=json` query parameter
+- **Admin User Creation**: Only users with `ADMIN` role can create users with custom roles via the `/user` POST endpoint
+- **Security Design**: This design prevents privilege escalation by ensuring only administrators can create users with elevated roles
+- **AuthModule Dependency**: The `AuthModule` imports `UserModule` to access `UserService` for user creation during registration
 
 ### Refresh Token System
 

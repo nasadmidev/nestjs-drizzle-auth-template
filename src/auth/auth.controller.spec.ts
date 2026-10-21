@@ -6,17 +6,22 @@ import { AuthGuard } from '@nestjs/passport';
 import { HttpAdapterHost } from '@nestjs/core';
 import type { Request, Response } from 'express';
 import { User, Role } from '@/db/schema';
+import { UserService } from '@/user/user.service';
+import { BadRequestException } from '@nestjs/common';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let mockAuthService: DeepMockProxy<AuthService>;
   let mockHttpAdapterHost: DeepMockProxy<HttpAdapterHost>;
+  let mockUserService: DeepMockProxy<UserService>;
 
   beforeEach(async () => {
     mockAuthService = mockDeep<AuthService>();
     mockHttpAdapterHost = mockDeep<HttpAdapterHost>();
     mockHttpAdapterHost.httpAdapter.setCookie.mockImplementation(() => {});
-    
+    mockHttpAdapterHost.httpAdapter.clearCookie.mockImplementation(() => {});
+    mockUserService = mockDeep<UserService>();
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
@@ -27,6 +32,10 @@ describe('AuthController', () => {
         {
           provide: HttpAdapterHost,
           useValue: mockHttpAdapterHost,
+        },
+        {
+          provide: UserService,
+          useValue: mockUserService,
         },
       ],
     })
@@ -42,6 +51,14 @@ describe('AuthController', () => {
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
+
+  const userMock = {
+    id: 'user-id',
+    email: 'user@user.com',
+    role: Role['USER'],
+    password: 'hashed',
+    createdAt: new Date(),
+  };
 
   describe('login controller', () => {
     it('should return jwt-token', async () => {
@@ -129,6 +146,77 @@ describe('AuthController', () => {
       await expect(
         controller.regenerateToken(mockRes, undefined, undefined),
       ).rejects.toThrow('No refresh token defined');
+    });
+  });
+
+  describe('logout', () => {
+    it('should call clear cookie for tokens', () => {
+      const mockRes = mockDeep<Response>();
+      const result = controller.logout(mockRes);
+      expect(result).toEqual({ message: 'Logout successfully' });
+      expect(mockHttpAdapterHost.httpAdapter.clearCookie).toHaveBeenCalledWith(
+        mockRes,
+        'refresh_token',
+      );
+      expect(mockHttpAdapterHost.httpAdapter.clearCookie).toHaveBeenCalledWith(
+        mockRes,
+        'access_token',
+      );
+    });
+  });
+
+  describe('register', () => {
+    it('should create a new user and try to set cookies in type set with "cookies"', async () => {
+      mockUserService.create.mockResolvedValue([userMock]);
+      mockAuthService.login.mockResolvedValue({
+        accessToken: '',
+        refreshToken: '',
+      });
+      const mockRes = mockDeep<Response>();
+      const result = await controller.register(
+        mockRes,
+        { email: userMock.email, password: userMock.password },
+        'cookies',
+      );
+      expect(result).toEqual({ message: 'Registration successfully' });
+      expect(mockUserService.create).toHaveBeenCalledWith({
+        email: userMock.email,
+        password: userMock.password,
+        role: Role['USER'],
+      });
+      expect(mockAuthService.login).toHaveBeenCalledWith(userMock);
+    });
+
+    it('should create a new user and return tokens in type set with "json"', async () => {
+      mockUserService.create.mockResolvedValue([userMock]);
+      mockAuthService.login.mockResolvedValue({
+        accessToken: '',
+        refreshToken: '',
+      });
+      const mockRes = mockDeep<Response>();
+      const result = await controller.register(
+        mockRes,
+        { email: userMock.email, password: userMock.password },
+        'json',
+      );
+      expect(result).toEqual({ accessToken: '', refreshToken: '' });
+      expect(mockUserService.create).toHaveBeenCalledWith({
+        email: userMock.email,
+        password: userMock.password,
+        role: Role['USER'],
+      });
+      expect(mockAuthService.login).toHaveBeenCalledWith(userMock);
+    });
+
+    it('should throw BadRequestException on invalid type registration', async () => {
+      const mockRes = mockDeep<Response>();
+      await expect(
+        controller.register(
+          mockRes,
+          { email: userMock.email, password: userMock.password },
+          'any' as 'json',
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

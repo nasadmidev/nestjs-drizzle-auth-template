@@ -3,10 +3,10 @@ import {
   Controller,
   Get,
   Param,
-  Post,
   Req,
   Put,
   Delete,
+  Post,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import type { RequestAuthorized } from '@/auth/auth.service';
@@ -62,8 +62,9 @@ export class UserController {
   }
 
   @Post()
+  @Roles(Role['ADMIN'])
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Create a new user' })
+  @ApiOperation({ summary: 'Create a new user (admin only)' })
   @ApiResponse({ status: 201, description: 'User created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async createUser(@Body() data: CreateUserDTO) {

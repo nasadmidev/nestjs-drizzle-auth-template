@@ -3,16 +3,23 @@ import {
   Catch,
   ExceptionFilter,
   HttpException,
+  InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
 
 @Catch()
 export class DrizzleExceptionFilter implements ExceptionFilter {
+  logger: Logger = new Logger();
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
+
     if (exception instanceof HttpException) {
-      throw exception;
+      return response
+        .status(exception.getStatus())
+        .json(exception.getResponse());
     }
 
     const drizzleError = exception as {
@@ -68,11 +75,18 @@ export class DrizzleExceptionFilter implements ExceptionFilter {
           message = 'SQL syntax error or query parsing failed';
           break;
         default:
-          throw exception;
+          this.logger.warn(
+            `Database error could not be managed by DrizzleException: ${drizzleError.code}`,
+          );
+          throw new InternalServerErrorException('Database error occurred');
       }
       return response.status(statusCode).json({ message });
     }
 
-    throw exception;
+    if (exception instanceof Error) {
+      throw new InternalServerErrorException(exception.message);
+    }
+
+    throw new InternalServerErrorException('An unexpected error occurred');
   }
 }
