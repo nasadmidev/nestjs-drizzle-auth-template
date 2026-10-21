@@ -143,13 +143,13 @@ describe('AuthService', () => {
     it('should regenerate token', async () => {
       jwtMockService.verifyAsync.mockResolvedValue(mockPayload);
       jwtMockService.signAsync.mockResolvedValue('new-token');
-      
+
       drizzleMock.select.mockReturnValueOnce({
         from: jest.fn().mockReturnValue({
           where: jest.fn().mockResolvedValue([{ id: 'token-id' }]),
         }),
       });
-      
+
       drizzleMock.delete.mockReturnValueOnce({
         where: jest.fn().mockResolvedValue(undefined),
       });
@@ -190,9 +190,7 @@ describe('AuthService', () => {
     });
 
     it('should throw UnauthorizedException on unknown error', async () => {
-      jwtMockService.verifyAsync.mockRejectedValue(
-        new Error('Unknown error'),
-      );
+      jwtMockService.verifyAsync.mockRejectedValue(new Error('Unknown error'));
 
       await expect(service.regenerateToken('token')).rejects.toThrow(
         'Unauthorized',

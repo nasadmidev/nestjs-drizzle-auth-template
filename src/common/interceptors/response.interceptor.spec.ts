@@ -55,6 +55,7 @@ describe('ResponseInterceptor', () => {
       statusCode: mockResponse.statusCode,
       path: `${mockRequest.method} ${mockRequest.path}`,
       date: expect.any(String) as string,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       data: mockUser,
     });
     expect(response.data).toEqual(mockUser);
