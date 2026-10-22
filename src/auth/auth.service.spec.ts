@@ -4,35 +4,25 @@ import { UserService } from '@/user/user.service';
 import { JwtService, TokenExpiredError, JsonWebTokenError } from '@nestjs/jwt';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import bcrypt from 'bcrypt';
-import { Role, User } from '@/db/schema';
-import { getDrizzleToken } from '@nestjs/drizzle';
+import { DrizzleDatabase, Role, User } from '@/db/schema';
+import { DrizzleService } from '@/db/drizzle.service';
 
 describe('AuthService', () => {
   let service: AuthService;
   let userMockService: DeepMockProxy<UserService>;
   let jwtMockService: DeepMockProxy<JwtService>;
-  let drizzleMock: { [k: string]: jest.Mock };
+  let drizzleServiceMock: DeepMockProxy<DrizzleService>;
 
   beforeEach(async () => {
     userMockService = mockDeep<UserService>();
     jwtMockService = mockDeep<JwtService>();
-    drizzleMock = {
-      select: jest.fn().mockReturnThis(),
-      from: jest.fn().mockReturnThis(),
-      where: jest.fn(),
-      insert: jest.fn().mockReturnThis(),
-      values: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-    };
+    drizzleServiceMock = mockDeep<DrizzleService>();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: UserService, useValue: userMockService },
         { provide: JwtService, useValue: jwtMockService },
-        {
-          provide: getDrizzleToken(),
-          useValue: drizzleMock,
-        },
+        { provide: DrizzleService, useValue: drizzleServiceMock },
       ],
     }).compile();
 
@@ -111,6 +101,13 @@ describe('AuthService', () => {
       };
 
       jwtMockService.signAsync.mockResolvedValue('jwt-token');
+      drizzleServiceMock.execute.mockImplementation(async (callback) => {
+        const dbMock = {
+          insert: jest.fn().mockReturnThis(),
+          values: jest.fn().mockResolvedValue(undefined),
+        } as unknown as DrizzleDatabase;
+        return await callback(dbMock);
+      });
 
       const result = await service.login(user);
       expect(result).toEqual({
@@ -144,18 +141,16 @@ describe('AuthService', () => {
       jwtMockService.verifyAsync.mockResolvedValue(mockPayload);
       jwtMockService.signAsync.mockResolvedValue('new-token');
 
-      drizzleMock.select.mockReturnValueOnce({
-        from: jest.fn().mockReturnValue({
+      drizzleServiceMock.execute.mockImplementation(async (callback) => {
+        const dbMock = {
+          select: jest.fn().mockReturnThis(),
+          from: jest.fn().mockReturnThis(),
           where: jest.fn().mockResolvedValue([{ id: 'token-id' }]),
-        }),
-      });
-
-      drizzleMock.delete.mockReturnValueOnce({
-        where: jest.fn().mockResolvedValue(undefined),
-      });
-
-      drizzleMock.insert.mockReturnValueOnce({
-        values: jest.fn().mockResolvedValue(undefined),
+          delete: jest.fn().mockReturnThis(),
+          insert: jest.fn().mockReturnThis(),
+          values: jest.fn().mockResolvedValue(undefined),
+        } as unknown as DrizzleDatabase;
+        return await callback(dbMock);
       });
 
       const result = await service.regenerateToken('token');

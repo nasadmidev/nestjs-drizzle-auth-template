@@ -1,24 +1,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TokenCleanupService } from './token-cleanup.service';
-import { getDrizzleToken } from '@nestjs/drizzle';
+import { DrizzleService } from '@/db/drizzle.service';
+import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 
 describe('TokenCleanupService', () => {
   let service: TokenCleanupService;
-  let drizzleMock: { [k: string]: jest.Mock };
+  let drizzleServiceMock: DeepMockProxy<DrizzleService>;
 
   beforeEach(async () => {
-    drizzleMock = {
-      delete: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      returning: jest.fn().mockResolvedValue([]),
-    };
+    drizzleServiceMock = mockDeep<DrizzleService>();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TokenCleanupService,
         {
-          provide: getDrizzleToken(),
-          useValue: drizzleMock,
+          provide: DrizzleService,
+          useValue: drizzleServiceMock,
         },
       ],
     }).compile();
@@ -31,8 +28,9 @@ describe('TokenCleanupService', () => {
   });
 
   it('should delete expired tokens', async () => {
+    drizzleServiceMock.execute.mockResolvedValue([{ id: 'token-1' }, { id: 'token-2' }]);
+
     await service.handleCron();
-    expect(drizzleMock.delete).toHaveBeenCalled();
-    expect(drizzleMock.where).toHaveBeenCalled();
+    expect(drizzleServiceMock.execute).toHaveBeenCalled();
   });
 });

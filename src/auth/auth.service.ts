@@ -8,17 +8,11 @@ import { UserService } from '@/user/user.service';
 import { compare } from 'bcrypt';
 import { JsonWebTokenError, JwtService, TokenExpiredError } from '@nestjs/jwt';
 import { AuthDTO } from './auth.dto';
-import {
-  RefreshToken,
-  refreshTokens,
-  Role,
-  type DrizzleDatabase,
-  type User,
-} from '@/db/schema';
-import { InjectDrizzle } from '@nestjs/drizzle';
+import { RefreshToken, refreshTokens, Role, type User } from '@/db/schema';
 import ms, { StringValue } from 'ms';
 import crypto from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
+import { DrizzleService } from '@/db/drizzle.service';
 
 export type JwtPayload = {
   sub: string;
@@ -34,7 +28,7 @@ export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly jwt: JwtService,
-    @InjectDrizzle() private readonly drizzle: DrizzleDatabase,
+    private readonly drizzleService: DrizzleService,
   ) {}
 
   private async generateRefreshToken({
@@ -60,10 +54,12 @@ export class AuthService {
       .update(refreshToken)
       .digest('hex');
 
-    await this.drizzle.insert(refreshTokens).values({
-      userId: sub,
-      tokenHash,
-      expiresAt: new Date(Date.now() + expires),
+    await this.drizzleService.execute(async (db) => {
+      return await db.insert(refreshTokens).values({
+        userId: sub,
+        tokenHash,
+        expiresAt: new Date(Date.now() + expires),
+      });
     });
 
     return refreshToken;
@@ -100,21 +96,25 @@ export class AuthService {
         .digest('hex');
 
       const savedToken: RefreshToken | undefined = (
-        await this.drizzle
-          .select()
-          .from(refreshTokens)
-          .where(
-            and(
-              eq(refreshTokens.tokenHash, incomingHash),
-              eq(refreshTokens.userId, verifiedToken.sub),
-            ),
-          )
+        await this.drizzleService.execute(async (db) => {
+          return await db
+            .select()
+            .from(refreshTokens)
+            .where(
+              and(
+                eq(refreshTokens.tokenHash, incomingHash),
+                eq(refreshTokens.userId, verifiedToken.sub),
+              ),
+            );
+        })
       )[0];
 
       if (savedToken) {
-        await this.drizzle
-          .delete(refreshTokens)
-          .where(and(eq(refreshTokens.id, savedToken.id)));
+        await this.drizzleService.execute(async (db) => {
+          await db
+            .delete(refreshTokens)
+            .where(and(eq(refreshTokens.id, savedToken.id)));
+        });
         const newRefreshToken = await this.generateRefreshToken({
           sub: verifiedToken.sub,
           role: verifiedToken.role,

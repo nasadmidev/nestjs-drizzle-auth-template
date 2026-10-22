@@ -6,17 +6,19 @@ The project uses a `DrizzleExceptionFilter` to handle PostgreSQL errors from Dri
 
 ### Key Design Decisions
 
-1. **Selective Error Handling**: The filter uses `@Catch()` to catch all exceptions but only handles errors with a PostgreSQL error code (`exception.code`).
+1. **Custom DrizzleException Class**: A custom `DrizzleException` class wraps Drizzle/PostgreSQL errors with structured data (code, column, message).
 
-2. **HttpException Direct Handling**: The filter explicitly checks for `HttpException` and handles it directly by returning the response with the appropriate status code and body, preventing it from being logged to the console as an error.
+2. **DrizzleService Wrapper**: The `DrizzleService` wraps all database operations and converts raw Drizzle errors into `DrizzleException` instances before throwing them.
 
-3. **Non-Drizzle Error Wrapping**: Errors without a PostgreSQL code or with unknown codes are wrapped in `InternalServerErrorException` and thrown, allowing NestJS to handle them with its standard error handling. This prevents raw errors from being logged to the console.
+3. **Selective Error Handling**: The filter uses `@Catch(DrizzleException)` to only catch `DrizzleException` instances, not all exceptions. This prevents interference with other error types.
 
-4. **Unknown PostgreSQL Code Logging**: When an unknown PostgreSQL error code is encountered, the filter logs a warning with the error code before wrapping it in `InternalServerErrorException` for debugging purposes.
+4. **Known PostgreSQL Code Mapping**: The filter maps known PostgreSQL error codes to appropriate HTTP status codes (e.g., 23505 → 409 Conflict, 23503 → 400 Bad Request).
 
-5. **No Extension of BaseExceptionFilter**: The filter implements `ExceptionFilter` directly instead of extending `BaseExceptionFilter` to avoid type issues and simplify testing.
+5. **Unknown PostgreSQL Code Handling**: When an unknown PostgreSQL error code is encountered, the filter logs a warning with the error code and message, then throws an `InternalServerErrorException` for debugging purposes.
 
-6. **No Conflict with Other Filters**: By wrapping non-Drizzle errors in `InternalServerErrorException`, they are handled by NestJS's standard error pipeline, allowing other custom filters to work without interference.
+6. **No Extension of BaseExceptionFilter**: The filter implements `ExceptionFilter` directly instead of extending `BaseExceptionFilter` to avoid type issues and simplify testing.
+
+7. **No Conflict with Other Filters**: By using `@Catch(DrizzleException)` instead of `@Catch()`, the filter only intercepts Drizzle errors, allowing NestJS's default error handling and other custom filters to work without interference.
 
 ### PostgreSQL Error Codes Handled
 

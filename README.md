@@ -293,10 +293,11 @@ Helmet CSP is configured with:
 
 This template includes a `DrizzleExceptionFilter` that handles PostgreSQL database errors from Drizzle ORM. The filter:
 
-- **Catches all exceptions** but only handles Drizzle/PostgreSQL errors (errors with a PostgreSQL error code)
-- **Handles `HttpException` directly** by returning the response with the appropriate status code and body, preventing console error logging
-- **Wraps non-Drizzle errors** in `InternalServerErrorException` so NestJS handles them with standard error handling, preventing raw errors from being logged to the console
-- **Maps common PostgreSQL error codes** to appropriate HTTP status codes (e.g., 23505 → 409 Conflict)
+- **Uses `@Catch(DrizzleException)`** to only intercept custom `DrizzleException` instances, not all exceptions
+- **Wraps all database operations** via `DrizzleService` which converts raw Drizzle errors into `DrizzleException` instances
+- **Maps known PostgreSQL error codes** to appropriate HTTP status codes (e.g., 23505 → 409 Conflict, 23503 → 400 Bad Request)
+- **Logs unknown PostgreSQL codes** as warnings before throwing `InternalServerErrorException` for debugging
+- **Does not interfere with other error types** - `HttpException` and other exceptions are handled by NestJS's default error handling
 
 ### Adding Custom Exception Filters
 
@@ -305,7 +306,7 @@ To add your own exception filters without conflicts:
 1. Create your filter class implementing `ExceptionFilter`
 2. Register it in `main.ts` with `app.useGlobalFilters(new YourFilter())`
 3. Order matters: filters are executed in the order they are registered
-4. The `DrizzleExceptionFilter` wraps non-Drizzle errors in `InternalServerErrorException`, so they flow through NestJS's standard error pipeline and won't interfere with your custom filters
+4. The `DrizzleExceptionFilter` only catches `DrizzleException`, so it won't interfere with your custom filters
 
 Example:
 

@@ -7,18 +7,19 @@ import { UserModule } from './user/user.module';
 import { HealthModule } from './health/health.module';
 import { JwtGuard } from './auth/jwt/jwt.guard';
 import { RolesGuard } from './auth/roles/role.guard';
-import { DrizzleModule } from '@nestjs/drizzle';
+import { DrizzleModule as NestDrizzle } from '@nestjs/drizzle';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/pg-core';
 import ms from 'ms';
 import { relations } from './db/relations';
 import { ScheduleModule } from '@nestjs/schedule';
+import { DrizzleModule } from './db/drizzle.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    DrizzleModule.forRootAsync({
+    NestDrizzle.forRootAsync({
       useFactory: async () => {
         const db = drizzle(process.env.DATABASE_URL!, { relations });
         await migrate([], db, { migrationsFolder: '../drizzle' });
@@ -43,6 +44,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AuthModule,
     UserModule,
     HealthModule,
+    DrizzleModule,
   ],
   providers: [
     {
