@@ -56,5 +56,5 @@ jobs:
       - name: Run Unit Tests
         run: pnpm run test
       
-      - name: Install Dependencies
+      - name: Running Tests E2E
         run: pnpm run test:e2e
