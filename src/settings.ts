@@ -8,6 +8,9 @@ import { JwtModuleOptions } from '@nestjs/jwt';
 import ms, { StringValue } from 'ms';
 import { ThrottlerModuleOptions } from '@nestjs/throttler';
 import { DrizzleModuleAsyncOptions } from '@nestjs/drizzle';
+import { MailerOptions } from '@nestjs-modules/mailer';
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.adapter';
+import { join } from 'node:path';
 
 export const corsOptions: CorsOptions = {
   methods: ['GET', 'OPTION', 'DELETE', 'PUT', 'POST', 'HEAD'],
@@ -82,4 +85,20 @@ export const validationPipeOptions: ValidationPipeOptions = {
   whitelist: true,
   forbidNonWhitelisted: true,
   transform: true,
+};
+
+export const mailerOptions: MailerOptions = {
+  transport: {
+    host: process.env.SMTP_HOST!,
+    port: parseInt(process.env.SMTP_PORT ?? '587'),
+    auth: {
+      user: process.env.SMTP_USER ?? 'user',
+      pass: process.env.SMTP_PASSWORD ?? 'pass',
+    },
+  },
+  defaults: { from: '"No Reply" <noreply@example.com>' },
+  template: {
+    dir: join(__dirname, 'mail', 'templates'),
+    adapter: new HandlebarsAdapter(),
+  },
 };

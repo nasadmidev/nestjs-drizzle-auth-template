@@ -84,6 +84,14 @@ The `TokenCleanupService` uses `@nestjs/schedule` to clean expired tokens:
 
 - bcrypt with cost factor 12 (higher than default 10 for better security)
 
+## Optional Email Delivery
+
+- Email delivery is enabled only when `SMTP_HOST` is set; `AppModule` then loads `MailerModule` and `MailModule`. Without it, the application starts without the mailer provider.
+- `SMTP_PORT` defaults to `587`. `SMTP_USER` and `SMTP_PASSWORD` default to `user` and `pass`; deployments should provide real credentials.
+- `MailerOptions` configures Nodemailer transport and the Handlebars adapter. Templates are resolved from `src/mail/templates` in development (relative to `__dirname`). No email templates are currently included in the repository.
+- `MailService.mail(email, subject, template, data)` sends a named template with its Handlebars context. It logs successful deliveries and throws `MailException` when the requested recipient is not listed as accepted by Nodemailer.
+- Before using email in production, ensure the Handlebars templates exist at the configured runtime path and are copied alongside the compiled application; the current Nest CLI configuration does not copy assets by default.
+
 ## Build and Test Commands
 
 ```bash

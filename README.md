@@ -4,7 +4,7 @@
 
 # NestJS Drizzle Template
 
-A production-ready NestJS template with Drizzle ORM, PostgreSQL, JWT authentication, role-based access control, and Swagger documentation.
+A production-ready NestJS template with Drizzle ORM, PostgreSQL, JWT authentication, role-based access control, optional SMTP email delivery, and Swagger documentation.
 <p align="center">
   <img src="https://img.shields.io/github/stars/nasadmidev/nestjs-drizzle-auth-template?style=for-the-badge"></img>
   <a href="https://opensource.org/license/mit" target="_blank"><img src="https://img.shields.io/github/license/nasadmidev/nestjs-drizzle-auth-template?style=for-the-badge"></img></a>
@@ -25,6 +25,7 @@ A production-ready NestJS template with Drizzle ORM, PostgreSQL, JWT authenticat
 - **Rate Limiting** with `@nestjs/throttler`
 - **HTTP-only & Secure Cookies** for token storage
 - **Swagger/OpenAPI** documentation with TypeScript type generation
+- **Optional email delivery** using SMTP, Nodemailer, and Handlebars templates
 - **Docker Compose** for local development
 - **Testing** with Jest, mocking, and comprehensive E2E tests
 - **Validation** with class-validator and Zod
@@ -76,9 +77,18 @@ REFRESH_TOKEN_EXPIRES="7d"
 PORT=3000
 NODE_ENV=development
 
+# Optional SMTP email delivery (omit SMTP_HOST to disable)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=user
+SMTP_PASSWORD=pass
+
 # CORS
 WHITELIST="http://localhost:3000,http://localhost:5173"
 ```
+## Email Delivery
+
+Email support is enabled only when `SMTP_HOST` is set. `SMTP_PORT` defaults to `587`; `SMTP_USER` and `SMTP_PASSWORD` default to `user` and `pass` when omitted. The mailer resolves Handlebars templates under `src/mail/templates`. No templates are included yet; add a `.hbs` template and pass its name, without the extension, to `MailService.mail(email, subject, template, data)`. The current Nest CLI build configuration does not copy assets, so production deployments must ensure templates are available at the configured runtime path. SMTP configuration must be supplied for the deployment environment; the example credentials are placeholders.
 
 ## Running the Application
 
@@ -204,6 +214,11 @@ src/
 ├── health/            # Health check module
 │   ├── health.controller.ts
 │   └── health.module.ts
+├── mail/              # Optional SMTP mail service and delivery exception
+│   ├── mail.exception.ts
+│   ├── mail.module.ts
+│   ├── mail.service.ts
+│   └── templates/      # Handlebars email templates (.hbs)
 ├── common/           # Shared utilities
 │   ├── e2e/          # E2E test utilities
 │   ├── pipes/        # Custom pipes

@@ -10,7 +10,14 @@ import { DrizzleModule as NestDrizzle } from '@nestjs/drizzle';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { DrizzleModule } from './db/drizzle.module';
-import { loadDrizzle, jwtSettings, throttlerSettings } from './settings';
+import {
+  loadDrizzle,
+  jwtSettings,
+  throttlerSettings,
+  mailerOptions,
+} from './settings';
+import { MailModule } from './mail/mail.module';
+import { MailerModule } from '@nestjs-modules/mailer';
 
 @Module({
   imports: [
@@ -19,6 +26,9 @@ import { loadDrizzle, jwtSettings, throttlerSettings } from './settings';
     JwtModule.register(jwtSettings),
     ThrottlerModule.forRoot(throttlerSettings),
     ScheduleModule.forRoot(),
+    ...(process.env.SMTP_HOST
+      ? [MailerModule.forRoot(mailerOptions), MailModule]
+      : []),
     AuthModule,
     UserModule,
     HealthModule,
