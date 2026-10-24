@@ -44,6 +44,9 @@ jobs:
       - name: Prepare environment file
         run: cp -r .env.example .env
       
+      - name: Push database
+        run: pnpm run db:generate && pnpm run db:migrate
+      
       - name: Build application
         run: pnpm run build
 

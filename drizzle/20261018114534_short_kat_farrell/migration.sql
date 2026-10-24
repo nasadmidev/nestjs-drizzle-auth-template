@@ -1,2 +1,0 @@
-ALTER TABLE "users" ALTER COLUMN "role" SET NOT NULL;--> statement-breakpoint
-ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;
