@@ -1,0 +1,50 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+
+    steps:
+      - name: Download code from repository
+        uses: actions/checkout@v7
+      
+      - name: Set PostgreSQL database
+        uses: harmon758/postgresql-action@v1
+        with:
+          postgresql version: '18-alpine'
+          postgresql db: 'postgres'
+          postgresql user: 'postgres'
+          postgresql password: 'postgres'
+      
+      - name: Set NodeJS
+        uses: actions/setup-node@v7
+        with:
+            node-version: '26'
+            cache: 'pnpm'
+            package-manager-cache: false
+
+      - name: Install Dependencies
+        run: pnpm i --frozen-lockfile
+      
+      - name: Prepare environment file
+        run: cp -r .env.example .env
+      
+      - name: Build application
+        run: pnpm run build
+
+      - name: Install Dependencies
+        run: pnpm i --frozen-lockfile
+      
+      - name: Run Unit Tests
+        run: pnpm run test
+      
+      - name: Install Dependencies
+        run: pnpm run test:e2e
