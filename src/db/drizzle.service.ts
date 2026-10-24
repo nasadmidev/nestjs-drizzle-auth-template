@@ -5,6 +5,7 @@ import {
   DrizzleException,
   type DrizzleExceptionData,
 } from './drizzle-exception/drizzle.exception';
+import type { DrizzleQueryError } from 'drizzle-orm';
 
 @Injectable()
 export class DrizzleService {
@@ -14,8 +15,16 @@ export class DrizzleService {
     try {
       return await operation(this.drizzle);
     } catch (e) {
-      const error = e as DrizzleExceptionData;
-      throw new DrizzleException(error);
+      const error = e as DrizzleQueryError;
+      const pgError = error.cause || error;
+
+      const drizzleExceptionData: DrizzleExceptionData = {
+        code: (pgError as unknown as DrizzleExceptionData).code || 'UNKNOWN',
+        column: (pgError as unknown as DrizzleExceptionData).column,
+        message: pgError.message || error.message || 'Unknown database error',
+      };
+
+      throw new DrizzleException(drizzleExceptionData);
     }
   }
 }

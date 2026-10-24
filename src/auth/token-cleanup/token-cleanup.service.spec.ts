@@ -28,7 +28,10 @@ describe('TokenCleanupService', () => {
   });
 
   it('should delete expired tokens', async () => {
-    drizzleServiceMock.execute.mockResolvedValue([{ id: 'token-1' }, { id: 'token-2' }]);
+    drizzleServiceMock.execute.mockResolvedValue([
+      { id: 'token-1' },
+      { id: 'token-2' },
+    ]);
 
     await service.handleCron();
     expect(drizzleServiceMock.execute).toHaveBeenCalled();

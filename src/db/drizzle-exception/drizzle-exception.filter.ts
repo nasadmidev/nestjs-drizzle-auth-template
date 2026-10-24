@@ -15,7 +15,6 @@ export class DrizzleExceptionFilter implements ExceptionFilter {
   catch(exception: DrizzleException, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-
     let statusCode: number;
     let message: string;
 

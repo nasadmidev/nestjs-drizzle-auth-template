@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/await-thenable */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
 import { DrizzleService } from './drizzle.service';
 import { getDrizzleToken } from '@nestjs/drizzle';
@@ -49,7 +53,11 @@ describe('DrizzleService', () => {
       code: '23505',
       message: 'duplicate key value violates unique constraint',
     };
-    drizzleMock.select.mockRejectedValue(pgError);
+    const drizzleError = {
+      cause: pgError,
+      message: 'Failed query',
+    };
+    drizzleMock.select.mockRejectedValue(drizzleError);
 
     await expect(
       service.execute(async (db) => {
@@ -65,7 +73,9 @@ describe('DrizzleService', () => {
       expect(e).toBeInstanceOf(DrizzleException);
       if (e instanceof DrizzleException) {
         expect(e.code).toBe('23505');
-        expect(e.message).toBe('duplicate key value violates unique constraint');
+        expect(e.message).toBe(
+          'duplicate key value violates unique constraint',
+        );
       }
     }
   });

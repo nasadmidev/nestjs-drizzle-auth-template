@@ -7,6 +7,7 @@ import {
   Put,
   Delete,
   Post,
+  NotFoundException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import type { RequestAuthorized } from '@/auth/auth.service';
@@ -20,7 +21,13 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  PickType,
 } from '@nestjs/swagger';
+
+class UpdateAuthenticatedUserDTO extends PickType(UpdateUserDTO, [
+  'email',
+  'password',
+]) {}
 
 @ApiTags('user')
 @Controller('user')
@@ -45,7 +52,10 @@ export class UserController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getUser(@Req() req: RequestAuthorized) {
     const { user } = req;
-    return await this.userService.findOne(user.sub);
+    const dbUser = (await this.userService.findOne(user.sub))[0];
+    if (!dbUser) throw new NotFoundException('User not found');
+    const { id, email, createdAt, role } = dbUser;
+    return { id, email, createdAt, role };
   }
 
   @Get(':id')
@@ -57,8 +67,11 @@ export class UserController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - admin only' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async getUserById(@Param('id', new UuidValidatorPipe()) id: string) {
-    return await this.userService.findOne(id);
+  async getUserById(@Param('id', new UuidValidatorPipe()) userId: string) {
+    const dbUser = (await this.userService.findOne(userId))[0];
+    if (!dbUser) throw new NotFoundException('User not found');
+    const { id, email, createdAt, role } = dbUser;
+    return { id, email, createdAt, role };
   }
 
   @Post()
@@ -68,7 +81,10 @@ export class UserController {
   @ApiResponse({ status: 201, description: 'User created successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async createUser(@Body() data: CreateUserDTO) {
-    return await this.userService.create(data);
+    const { id, email, role, createdAt } = (
+      await this.userService.create(data)
+    )[0];
+    return { id, email, role, createdAt };
   }
 
   @Put()
@@ -76,9 +92,15 @@ export class UserController {
   @ApiOperation({ summary: 'Update current authenticated user' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async updateUser(@Req() req: RequestAuthorized, @Body() data: UpdateUserDTO) {
+  async updateUser(
+    @Req() req: RequestAuthorized,
+    @Body() data: UpdateAuthenticatedUserDTO,
+  ) {
     const { user } = req;
-    return await this.userService.update(user.sub, data);
+    const dbUser = (await this.userService.update(user.sub, data))[0];
+    if (!dbUser) throw new NotFoundException('User not found');
+    const { email, id, createdAt } = dbUser;
+    return { email, id, createdAt };
   }
 
   @Put(':id')
@@ -91,10 +113,13 @@ export class UserController {
   @ApiResponse({ status: 403, description: 'Forbidden - admin only' })
   @ApiResponse({ status: 404, description: 'User not found' })
   async updateUserById(
-    @Param('id', new UuidValidatorPipe()) id: string,
+    @Param('id', new UuidValidatorPipe()) userId: string,
     @Body() data: UpdateUserDTO,
   ) {
-    return await this.userService.update(id, data);
+    const dbUser = (await this.userService.update(userId, data))[0];
+    if (!dbUser) throw new NotFoundException('User not found');
+    const { email, id, createdAt, role } = dbUser;
+    return { email, id, createdAt, role };
   }
 
   @Delete()
@@ -104,7 +129,10 @@ export class UserController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async deleteUser(@Req() req: RequestAuthorized) {
     const { user } = req;
-    return await this.userService.delete(user.sub);
+    const dbUser = (await this.userService.delete(user.sub))[0];
+    if (!dbUser) throw new NotFoundException('User not found');
+    const { id, email } = dbUser;
+    return { id, email };
   }
 
   @Delete(':id')
@@ -116,7 +144,10 @@ export class UserController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - admin only' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async deleteUserById(@Param('id', new UuidValidatorPipe()) id: string) {
-    return await this.userService.delete(id);
+  async deleteUserById(@Param('id', new UuidValidatorPipe()) userId: string) {
+    const dbUser = (await this.userService.delete(userId))[0];
+    if (!dbUser) throw new NotFoundException('User not found');
+    const { id, email } = dbUser;
+    return { id, email };
   }
 }

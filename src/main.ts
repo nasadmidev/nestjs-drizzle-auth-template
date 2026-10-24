@@ -1,60 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ForbiddenException, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
-import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
-import helmet, { type HelmetOptions } from 'helmet';
+import helmet from 'helmet';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { DrizzleExceptionFilter } from './db/drizzle-exception/drizzle-exception.filter';
 import cookieParser from 'cookie-parser';
-
-const corsOptions: CorsOptions = {
-  methods: ['GET', 'OPTION', 'DELETE', 'PUT', 'POST', 'HEAD'],
-  allowedHeaders: ['Content-Type', 'Content-Length', 'Authorization'],
-  preflightContinue: true,
-  optionsSuccessStatus: 200,
-  credentials: true,
-  origin: (o, cb) => {
-    const whitelist = process.env.WHITELIST ?? null;
-    if (!o) {
-      return cb(null, true);
-    }
-
-    if (!whitelist) {
-      return cb(new ForbiddenException('Blocked by CORS Policy'), false);
-    }
-
-    if (
-      whitelist.split(',').find((validOrigins) => validOrigins.trim() === o)
-    ) {
-      return cb(null, true);
-    }
-
-    return cb(new ForbiddenException('Blocked by CORS Policy'), false);
-  },
-};
-
-const helmetOptions: HelmetOptions = {
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: [`'self'`],
-      styleSrc: [`'self'`],
-      imgSrc: [`'self'`, 'data:', 'validator.swagger.io'],
-      scriptSrc: [`'self'`],
-    },
-  },
-};
+import { corsOptions, helmetOptions, validationPipeOptions } from './settings';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalFilters(new DrizzleExceptionFilter());
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
+  app.useGlobalPipes(new ValidationPipe(validationPipeOptions));
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.enableCors(corsOptions);
   app.use(helmet(helmetOptions));
