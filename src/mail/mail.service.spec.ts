@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MailService } from './mail.service';
 import { MailerService } from '@nestjs-modules/mailer';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
-import { MailException } from './mail.exception';
 import { Logger } from '@nestjs/common';
 
 describe('MailService', () => {
@@ -36,7 +35,68 @@ describe('MailService', () => {
     });
     await expect(
       service.mail('user', 'Subject', 'template', {}),
-    ).rejects.toThrow(MailException);
+    ).rejects.toMatchObject({
+      name: 'MailException',
+      accepted: ['another'],
+      rejected: undefined,
+      retryable: false,
+    });
+  });
+
+  it('normalizes a temporary SMTP failure and retains its original cause', async () => {
+    const smtpError = Object.assign(new Error('Connection timed out'), {
+      code: 'ETIMEDOUT',
+      command: 'CONN',
+      responseCode: 421,
+      response: '421 Service temporarily unavailable',
+      permanent: false,
+    });
+    mailerServiceMock.sendMail.mockRejectedValue(smtpError);
+
+    await expect(
+      service.mail('user', 'Subject', 'template', {}),
+    ).rejects.toMatchObject({
+      name: 'MailException',
+      message: 'Connection timed out',
+      code: 'ETIMEDOUT',
+      command: 'CONN',
+      responseCode: 421,
+      response: '421 Service temporarily unavailable',
+      permanent: false,
+      retryable: true,
+      cause: smtpError,
+    });
+  });
+
+  it('marks permanent SMTP rejections as not retryable', async () => {
+    const smtpError = Object.assign(new Error('Authentication failed'), {
+      code: 'EAUTH',
+      responseCode: 535,
+      permanent: true,
+    });
+    mailerServiceMock.sendMail.mockRejectedValue(smtpError);
+
+    await expect(
+      service.mail('user', 'Subject', 'template', {}),
+    ).rejects.toMatchObject({
+      code: 'EAUTH',
+      responseCode: 535,
+      permanent: true,
+      retryable: false,
+    });
+  });
+
+  it('wraps non-Error rejections as an unknown mail failure', async () => {
+    mailerServiceMock.sendMail.mockRejectedValue('unexpected failure');
+
+    await expect(
+      service.mail('user', 'Subject', 'template', {}),
+    ).rejects.toMatchObject({
+      name: 'MailException',
+      message: 'Email delivery failed with an unknown error',
+      retryable: false,
+      cause: 'unexpected failure',
+    });
   });
 
   it('should log the messageId and email when the email is sent it properly', async () => {

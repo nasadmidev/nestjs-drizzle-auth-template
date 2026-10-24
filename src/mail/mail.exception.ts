@@ -1,29 +1,39 @@
-interface MailExceptionData {
-  messageId: string;
+export interface MailExceptionData {
+  messageId?: string;
+  code?: string;
+  command?: string;
+  responseCode?: number;
   response?: string;
-  rejected?: string[];
+  permanent?: boolean;
+  retryable?: boolean;
   accepted?: string[];
-  smtpMessage?: any;
+  rejected?: string[];
+  message?: string;
+  cause?: unknown;
 }
 
 export class MailException extends Error {
-  messageId: string;
-  response?: string;
-  rejected?: string[];
-  accepted?: string[];
-  smtpMessage?: unknown;
-  constructor({
-    messageId,
-    rejected,
-    response,
-    accepted,
-    smtpMessage,
-  }: MailExceptionData) {
-    super(MailException.name);
-    this.messageId = messageId;
-    this.response = response;
-    this.rejected = rejected;
-    this.accepted = accepted;
-    this.smtpMessage = smtpMessage;
+  readonly messageId?: string;
+  readonly code?: string;
+  readonly command?: string;
+  readonly responseCode?: number;
+  readonly response?: string;
+  readonly permanent?: boolean;
+  readonly retryable?: boolean;
+  readonly accepted?: string[];
+  readonly rejected?: string[];
+
+  constructor(data: MailExceptionData) {
+    super(data.message ?? 'Email delivery failed', { cause: data.cause });
+    this.name = MailException.name;
+    this.messageId = data.messageId;
+    this.code = data.code;
+    this.command = data.command;
+    this.responseCode = data.responseCode;
+    this.response = data.response;
+    this.permanent = data.permanent;
+    this.retryable = data.retryable;
+    this.accepted = data.accepted;
+    this.rejected = data.rejected;
   }
 }

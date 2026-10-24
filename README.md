@@ -88,7 +88,7 @@ WHITELIST="http://localhost:3000,http://localhost:5173"
 ```
 ## Email Delivery
 
-Email support is enabled only when `SMTP_HOST` is set. `SMTP_PORT` defaults to `587`; `SMTP_USER` and `SMTP_PASSWORD` default to `user` and `pass` when omitted. The mailer resolves Handlebars templates under `src/mail/templates`. No templates are included yet; add a `.hbs` template and pass its name, without the extension, to `MailService.mail(email, subject, template, data)`. The current Nest CLI build configuration does not copy assets, so production deployments must ensure templates are available at the configured runtime path. SMTP configuration must be supplied for the deployment environment; the example credentials are placeholders.
+Email support is enabled only when `SMTP_HOST` is set. `SMTP_PORT` defaults to `587`; `SMTP_USER` and `SMTP_PASSWORD` default to `user` and `pass` when omitted. The mailer resolves Handlebars templates under `src/mail/templates`. No templates are included yet; add a `.hbs` template and pass its name, without the extension, to `MailService.mail(email, subject, template, data)`. `MailService` wraps send failures in `MailException` with SMTP diagnostics and a retry hint. The current Nest CLI build configuration does not copy assets, so production deployments must ensure templates are available at the configured runtime path. SMTP configuration must be supplied for the deployment environment; the example credentials are placeholders.
 
 ## Running the Application
 
@@ -293,7 +293,7 @@ The template implements a secure refresh token system:
 
 The `TokenCleanupService` runs as a scheduled task to maintain database hygiene:
 
-- **Schedule**: Runs every day at 1 AM seconds using `@nestjs/schedule`
+- **Schedule**: Runs every day at 1 AM using `@nestjs/schedule`
 - **Function**: Deletes expired refresh tokens from the database
 - **Logging**: Logs the number and IDs of deleted tokens for monitoring
 - **Efficiency**: Uses database-level filtering for optimal performance

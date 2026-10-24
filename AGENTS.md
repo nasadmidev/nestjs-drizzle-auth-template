@@ -61,7 +61,7 @@ The project implements a secure refresh token rotation system:
 
 The `TokenCleanupService` uses `@nestjs/schedule` to clean expired tokens:
 
-- **Schedule**: Runs every 30 seconds using `@Cron(CronExpression.EVERY_30_SECONDS)`
+- **Schedule**: Runs daily at 1:00 AM using `@Cron(CronExpression.EVERY_DAY_AT_1AM)`
 - **Cleanup**: Deletes refresh tokens where `expiresAt < now()`
 - **Logging**: Logs deleted token IDs for monitoring
 - **Location**: `src/auth/token-cleanup/token-cleanup.service.ts`
@@ -89,7 +89,7 @@ The `TokenCleanupService` uses `@nestjs/schedule` to clean expired tokens:
 - Email delivery is enabled only when `SMTP_HOST` is set; `AppModule` then loads `MailerModule` and `MailModule`. Without it, the application starts without the mailer provider.
 - `SMTP_PORT` defaults to `587`. `SMTP_USER` and `SMTP_PASSWORD` default to `user` and `pass`; deployments should provide real credentials.
 - `MailerOptions` configures Nodemailer transport and the Handlebars adapter. Templates are resolved from `src/mail/templates` in development (relative to `__dirname`). No email templates are currently included in the repository.
-- `MailService.mail(email, subject, template, data)` sends a named template with its Handlebars context. It logs successful deliveries and throws `MailException` when the requested recipient is not listed as accepted by Nodemailer.
+- `MailService.mail(email, subject, template, data)` sends a named template with its Handlebars context. It normalizes Nodemailer failures and recipient rejection into `MailException`, retaining diagnostic fields such as `code`, `command`, `responseCode`, and `response`, plus the original cause. `retryable` is derived from Nodemailer's `permanent` flag, SMTP 4xx responses, and known transient connection codes; it is a retry hint, not a built-in retry mechanism.
 - Before using email in production, ensure the Handlebars templates exist at the configured runtime path and are copied alongside the compiled application; the current Nest CLI configuration does not copy assets by default.
 
 ## Build and Test Commands
