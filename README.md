@@ -23,6 +23,7 @@ A production-ready NestJS template with Drizzle ORM, PostgreSQL, JWT authenticat
 - **Automatic Token Cleanup** with scheduled tasks
 - **Role-Based Access Control** (USER, ADMIN roles)
 - **Rate Limiting** with `@nestjs/throttler`
+- **Structured HTTP logging** with Pino and readable response JSON (when `NODE_ENV = development`)
 - **HTTP-only & Secure Cookies** for token storage
 - **Swagger/OpenAPI** documentation with TypeScript type generation
 - **Optional email delivery** using SMTP, Nodemailer, and Handlebars templates
@@ -99,6 +100,10 @@ pnpm run start:dev
 # Production
 pnpm run start:prod
 ```
+
+### HTTP Request Logging
+
+Automatic HTTP logs are formatted with `pino-pretty` as `<method> <url> <status> <body>` followed by an indented JSON object containing the response body, headers, and cookies. Sensitive values such as passwords, tokens, authorization headers, and cookie values are redacted. The `/health` endpoint is excluded from automatic HTTP logging. Responses that bypass the global response interceptor (such as exception responses) may have an empty `body` field in this log.
 
 ## API Documentation
 

@@ -73,6 +73,14 @@ The `TokenCleanupService` uses `@nestjs/schedule` to clean expired tokens:
 - Auth endpoints: 10 requests per minute
 - Health endpoint: Excluded from rate limiting
 
+## HTTP Logging
+
+- HTTP access logs use `nestjs-pino`, `pino-http`, and `pino-pretty`; `/health` is excluded from automatic request logging.
+- The pretty log message is `<method> <url> <status> <body>` followed by indented JSON containing `body`, `headers`, and `cookies` for the response. Pino's duplicate `req`, `res`, and `responseTime` fields are hidden from the pretty output.
+- Response bodies are attached by the global `ResponseInterceptor` to `res.locals.responseBody`. Routes or exceptions that bypass this interceptor may be logged with an empty body object.
+- Sensitive fields matching password, token, secret, authorization, cookie, or API-key names are redacted. Set-Cookie values are masked while cookie names remain visible.
+- Log level is `debug` outside production and `info` in production; preserve `/health` exclusion when changing the logger setup.
+
 ### Cookie Security
 
 - **httpOnly**: Prevents XSS attacks

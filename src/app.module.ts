@@ -15,13 +15,18 @@ import {
   jwtSettings,
   throttlerSettings,
   mailerOptions,
+  pinoOptions,
 } from './settings';
 import { MailModule } from './mail/mail.module';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { LoggerModule } from 'nestjs-pino';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ...(process.env.NODE_ENV === 'development'
+      ? [LoggerModule.forRoot(pinoOptions({ ignorePaths: ['/health'] }))]
+      : []),
     NestDrizzle.forRootAsync(loadDrizzle()),
     JwtModule.register(jwtSettings),
     ThrottlerModule.forRoot(throttlerSettings),

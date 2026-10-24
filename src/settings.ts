@@ -11,6 +11,62 @@ import { DrizzleModuleAsyncOptions } from '@nestjs/drizzle';
 import { MailerOptions } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.adapter';
 import { join } from 'node:path';
+import type { PrettyOptions } from 'pino-pretty';
+import { Request, Response } from 'express';
+
+const sensitiveFieldPattern =
+  /password|token|secret|authorization|cookie|api[-_]?key/i;
+
+function redactSensitiveValues(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(redactSensitiveValues);
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        key,
+        sensitiveFieldPattern.test(key)
+          ? '[REDACTED]'
+          : redactSensitiveValues(item),
+      ]),
+    );
+  }
+  return value;
+}
+
+function redactHeaders(
+  headers: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(headers).map(([key, value]) => [
+      key,
+      sensitiveFieldPattern.test(key)
+        ? '[REDACTED]'
+        : redactSensitiveValues(value),
+    ]),
+  );
+}
+
+function responseLogMessage(_req: Request, res: Response): string {
+  const headers = res.getHeaders() as Record<string, unknown>;
+  const setCookie = headers['set-cookie'];
+  const cookies = Array.isArray(setCookie)
+    ? setCookie.map((cookie) => `${String(cookie).split('=', 1)[0]}=[REDACTED]`)
+    : setCookie
+      ? // eslint-disable-next-line @typescript-eslint/no-base-to-string
+        [`${String(setCookie).split('=', 1)[0]}=[REDACTED]`]
+      : [];
+  const responseData = JSON.stringify(
+    {
+      body: redactSensitiveValues(res.locals.responseBody ?? {}),
+      headers: redactHeaders(headers),
+      cookies,
+    },
+    null,
+    2,
+  );
+  return `${res.req.method} ${res.req.url} ${res.statusCode}\n${responseData}`;
+}
 
 export const corsOptions: CorsOptions = {
   methods: ['GET', 'OPTION', 'DELETE', 'PUT', 'POST', 'HEAD'],
@@ -102,3 +158,23 @@ export const mailerOptions: MailerOptions = {
     adapter: new HandlebarsAdapter(),
   },
 };
+
+export const pinoOptions = ({ ignorePaths }: { ignorePaths: string[] }) => ({
+  pinoHttp: {
+    level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
+    autoLogging: {
+      ignore: (req: Request) => ignorePaths.includes(req.url),
+    },
+    customSuccessMessage: responseLogMessage,
+    customErrorMessage: responseLogMessage,
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        singleLine: false,
+        translateTime: 'SYS:standard',
+        colorize: true,
+        ignore: 'req,res,responseTime',
+      } satisfies PrettyOptions,
+    },
+  },
+});

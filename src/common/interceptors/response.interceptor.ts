@@ -29,31 +29,35 @@ export class ResponseInterceptor<T> implements NestInterceptor<
 
     return next.handle().pipe(
       map((data) => {
+        let response: ApiResponse<T>;
         if (data === null) {
-          return {
+          response = {
             statusCode: 404,
             path: `${req.method} ${req.path}`,
             date: new Date().toISOString(),
             data,
           };
-        }
-
-        if (Array.isArray(data) && data.length === 1) {
-          return {
+        } else if (Array.isArray(data) && data.length === 1) {
+          response = {
             statusCode: res.statusCode,
             path: `${req.method} ${req.path}`,
             date: new Date().toISOString(),
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             data: data[0],
           };
+        } else {
+          response = {
+            statusCode: res.statusCode,
+            path: `${req.method} ${req.path}`,
+            date: new Date().toISOString(),
+            data,
+          };
         }
 
-        return {
-          statusCode: res.statusCode,
-          path: `${req.method} ${req.path}`,
-          date: new Date().toISOString(),
-          data,
+        res.locals = {
+          responseBody: response,
         };
+        return response;
       }),
     );
   }
