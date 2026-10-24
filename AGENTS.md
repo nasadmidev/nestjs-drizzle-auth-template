@@ -8,7 +8,7 @@ The project uses a `DrizzleExceptionFilter` to handle PostgreSQL errors from Dri
 
 1. **Custom DrizzleException Class**: A custom `DrizzleException` class wraps Drizzle/PostgreSQL errors with structured data (code, column, message).
 
-2. **DrizzleService Wrapper**: The `DrizzleService` wraps all database operations and converts raw Drizzle errors into `DrizzleException` instances before throwing them.
+2. **DrizzleService Wrapper**: The `DrizzleService` wraps all database operations and converts raw Drizzle errors into `DrizzleException` instances before throwing them. It extracts the actual PostgreSQL error from `error.cause` (DrizzleQueryError wraps the PostgreSQL error in this property).
 
 3. **Selective Error Handling**: The filter uses `@Catch(DrizzleException)` to only catch `DrizzleException` instances, not all exceptions. This prevents interference with other error types.
 
@@ -90,11 +90,14 @@ The `TokenCleanupService` uses `@nestjs/schedule` to clean expired tokens:
 # Development
 pnpm run start:dev
 
+# Type Generation
+pnpm run generate:types    # Generate TypeScript types from Swagger
+
 # Testing
 pnpm run test              # Unit tests
 pnpm run test:watch        # Watch mode
 pnpm run test:cov          # Coverage report
-pnpm run test:e2e          # E2E tests
+pnpm run test:e2e          # E2E tests (runs with --runInBand)
 
 # Database
 pnpm run db:up             # Start PostgreSQL

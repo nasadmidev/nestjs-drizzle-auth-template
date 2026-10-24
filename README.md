@@ -24,9 +24,9 @@ A production-ready NestJS template with Drizzle ORM, PostgreSQL, JWT authenticat
 - **Role-Based Access Control** (USER, ADMIN roles)
 - **Rate Limiting** with `@nestjs/throttler`
 - **HTTP-only & Secure Cookies** for token storage
-- **Swagger/OpenAPI** documentation
+- **Swagger/OpenAPI** documentation with TypeScript type generation
 - **Docker Compose** for local development
-- **Testing** with Jest and mocking
+- **Testing** with Jest, mocking, and comprehensive E2E tests
 - **Validation** with class-validator and Zod
 - **Security** with Helmet, CORS, CSP
 
@@ -98,6 +98,17 @@ Once running, access the Swagger UI at:
 http://localhost:3000/docs
 ```
 
+### TypeScript Type Generation
+
+The project includes a script to generate TypeScript types from the Swagger/OpenAPI documentation:
+
+```bash
+# Generate TypeScript types from Swagger
+pnpm run generate:types
+```
+
+This fetches the OpenAPI JSON specification from `/docs-json` and generates strongly-typed interfaces for your API endpoints, which can be used in frontend applications or API clients.
+
 ### Available Endpoints
 
 #### Auth (`/auth`)
@@ -141,9 +152,18 @@ pnpm run test:watch
 # Coverage report
 pnpm run test:cov
 
-# E2E tests
+# E2E tests (runs in single thread to avoid database conflicts)
 pnpm run test:e2e
 ```
+
+### E2E Testing
+
+The project includes comprehensive E2E tests for:
+
+- **AuthController**: 14 tests covering login, registration, token refresh, and logout
+- **UserController**: 33 tests covering CRUD operations, role-based access, and validation
+
+E2E tests run with `--runInBand` flag to prevent database conflicts between test suites. Each test suite cleans up test data (`@test-e2e.com` emails) before and after execution.
 
 ## Database Scripts
 
@@ -168,22 +188,27 @@ src/
 │   ├── token-cleanup/ # Scheduled token cleanup service
 │   ├── auth.controller.ts
 │   ├── auth.service.ts
-│   └── auth.module.ts
+│   ├── auth.module.ts
+│   └── auth.e2e-spec.ts
 ├── user/              # User module
 │   ├── user.controller.ts
 │   ├── user.service.ts
 │   ├── user.dto.ts
-│   └── user.module.ts
+│   ├── user.module.ts
+│   └── user.e2e-spec.ts
 ├── db/                # Database schema and configuration
 │   ├── schema.ts      # Database table definitions
 │   ├── relations.ts   # Drizzle ORM relations
+│   ├── drizzle.service.ts # Database service wrapper
 │   └── drizzle-exception/ # Exception filter for Drizzle errors
 ├── health/            # Health check module
 │   ├── health.controller.ts
 │   └── health.module.ts
 ├── common/           # Shared utilities
+│   ├── e2e/          # E2E test utilities
 │   ├── pipes/        # Custom pipes
 │   └── interceptors/ # Custom interceptors
+├── settings.ts       # Centralized configuration and settings
 ├── main.ts           # Application bootstrap
 └── app.module.ts     # Root module
 ```
