@@ -9,6 +9,12 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: write
+
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
 
