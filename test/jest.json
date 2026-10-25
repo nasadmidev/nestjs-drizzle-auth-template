@@ -13,12 +13,22 @@
       }
     ]
   },
-  "collectCoverageFrom": ["**/*.(t|j)s"],
+  "collectCoverageFrom": [
+    "**/*.(t|j)s",
+    "!**/*.e2e-spec.ts",
+    "!**/*.test.ts",
+    "!**/*.dto.ts",
+    "!**/*.module.ts",
+    "!main.ts",
+    "!settings.ts",
+    "!**/*.strategy.ts"
+  ],
   "coverageDirectory": "../coverage",
   "testEnvironment": "node",
   "moduleNameMapper": {
     "^@/(.*)$": "<rootDir>/$1",
     "^(\\.{1,2}/.*)\\.js$": "$1"
   },
-  "setupFilesAfterEnv": ["<rootDir>/../test/setup.ts"]
+  "setupFilesAfterEnv": ["<rootDir>/../test/setup.ts"],
+  "coverageReporters": ["json-summary", "text"]
 }

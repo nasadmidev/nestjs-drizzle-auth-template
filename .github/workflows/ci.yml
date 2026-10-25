@@ -58,3 +58,12 @@ jobs:
       
       - name: Running Tests E2E
         run: pnpm run test:e2e
+      
+      - name: Run Test Coverage
+        run: pnpm run test:cov
+      
+      - name: Jest Coverage Comment
+        uses: MishaKav/jest-coverage-comment@main
+        with:
+          coverage-summary-path: ./coverage/coverage-summary.json
+          hide-summary: false
