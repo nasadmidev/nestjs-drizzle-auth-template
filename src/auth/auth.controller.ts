@@ -13,7 +13,7 @@ import {
   Query,
   HttpCode,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
+import { AuthService, type RequestAuthorized } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 import { Role, User } from '@/db/schema';
@@ -151,9 +151,13 @@ export class AuthController {
     summary: 'Delete refresh_token and access_token from cookies',
   })
   @ApiResponse({ status: 200, description: 'Token deleted from cookies' })
-  logout(@Res({ passthrough: true }) response: Response) {
-    this.adapterHost.httpAdapter.clearCookie(response, 'refresh_token');
+  async logout(
+    @Req() req: RequestAuthorized,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     this.adapterHost.httpAdapter.clearCookie(response, 'access_token');
+    this.adapterHost.httpAdapter.clearCookie(response, 'refresh_token');
+    await this.authService.logout(req.user.sub);
     return { message: 'Logout successfully' };
   }
 

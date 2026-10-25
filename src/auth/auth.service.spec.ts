@@ -6,6 +6,7 @@ import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import bcrypt from 'bcrypt';
 import { DrizzleDatabase, Role, User } from '@/db/schema';
 import { DrizzleService } from '@/db/drizzle.service';
+import { randomUUID } from 'node:crypto';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -190,6 +191,23 @@ describe('AuthService', () => {
       await expect(service.regenerateToken('token')).rejects.toThrow(
         'Unauthorized',
       );
+    });
+  });
+
+  describe('logout', () => {
+    const id = randomUUID();
+    it('should call db.delete using userId', async () => {
+      drizzleServiceMock.execute.mockImplementation(async (callback) => {
+        const dbMock = {
+          delete: jest.fn().mockReturnThis(),
+          where: jest.fn().mockReturnThis(),
+          returning: jest.fn().mockResolvedValue([id]),
+        } as unknown as DrizzleDatabase;
+        return await callback(dbMock);
+      });
+
+      const result = await service.logout(id);
+      expect(result).toEqual([id]);
     });
   });
 });

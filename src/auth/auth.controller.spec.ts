@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
+import { AuthService, RequestAuthorized } from './auth.service';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { AuthGuard } from '@nestjs/passport';
 import { HttpAdapterHost } from '@nestjs/core';
@@ -150,10 +150,18 @@ describe('AuthController', () => {
   });
 
   describe('logout', () => {
-    it('should call clear cookie for tokens', () => {
+    it('should call clear cookie for tokens', async () => {
+      mockAuthService.logout.mockResolvedValue([{ id: 'id' }]);
       const mockRes = mockDeep<Response>();
-      const result = controller.logout(mockRes);
+      const mockReq = {
+        user: {
+          sub: 'id',
+          role: 'USER',
+        },
+      } as RequestAuthorized;
+      const result = await controller.logout(mockReq, mockRes);
       expect(result).toEqual({ message: 'Logout successfully' });
+      expect(mockAuthService.logout).toHaveBeenCalledWith('id');
       expect(mockHttpAdapterHost.httpAdapter.clearCookie).toHaveBeenCalledWith(
         mockRes,
         'refresh_token',

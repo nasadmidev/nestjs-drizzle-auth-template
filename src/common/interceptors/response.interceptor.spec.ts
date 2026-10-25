@@ -1,11 +1,11 @@
 import { of } from 'rxjs';
-import { User } from '@/generated/prisma/client';
+import { Role, User } from '@/db/schema';
 import { ResponseInterceptor } from './response.interceptor';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { CallHandler, ExecutionContext } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Response, Request } from 'express';
-import type { HttpArgumentsHost } from '@nestjs/common/interfaces';
+import type { HttpArgumentsHost } from '@nestjs/common/internal';
 import { lastValueFrom } from 'rxjs';
 
 describe('ResponseInterceptor', () => {
@@ -37,10 +37,9 @@ describe('ResponseInterceptor', () => {
 
     const mockUser: User = {
       id,
-      username: 'Test',
       email: 'test@test.com',
       password: 'Test1234',
-      role: 'ADMIN',
+      role: Role['ADMIN'],
       createdAt: new Date(),
     };
 
@@ -55,7 +54,7 @@ describe('ResponseInterceptor', () => {
       statusCode: mockResponse.statusCode,
       path: `${mockRequest.method} ${mockRequest.path}`,
       date: expect.any(String) as string,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       data: mockUser,
     });
     expect(response.data).toEqual(mockUser);

@@ -13,6 +13,7 @@ import ms, { StringValue } from 'ms';
 import crypto from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import { DrizzleService } from '@/db/drizzle.service';
+import { validateUUID } from '@/common/pipes/uuid-validator/uuid-validator.pipe';
 
 export type JwtPayload = {
   sub: string;
@@ -135,5 +136,15 @@ export class AuthService {
 
       throw new UnauthorizedException();
     }
+  }
+
+  async logout(id: string) {
+    validateUUID(id);
+    return await this.drizzleService.execute(async (db) => {
+      return await db
+        .delete(refreshTokens)
+        .where(eq(refreshTokens.userId, id))
+        .returning({ id: refreshTokens.id });
+    });
   }
 }
