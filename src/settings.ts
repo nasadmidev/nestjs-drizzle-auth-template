@@ -69,10 +69,10 @@ function responseLogMessage(_req: Request, res: Response): string {
 }
 
 export const corsOptions: CorsOptions = {
-  methods: ['GET', 'OPTION', 'DELETE', 'PUT', 'POST', 'HEAD'],
+  methods: ['GET', 'OPTIONS', 'DELETE', 'PUT', 'POST', 'HEAD'],
   allowedHeaders: ['Content-Type', 'Content-Length', 'Authorization'],
-  preflightContinue: true,
-  optionsSuccessStatus: 200,
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
   credentials: true,
   origin: (o, cb) => {
     const whitelist = process.env.WHITELIST ?? null;
@@ -84,9 +84,8 @@ export const corsOptions: CorsOptions = {
       return cb(new ForbiddenException('Blocked by CORS Policy'), false);
     }
 
-    if (
-      whitelist.split(',').find((validOrigins) => validOrigins.trim() === o)
-    ) {
+    const allowedOrigins = whitelist.split(',').map((origin) => origin.trim());
+    if (allowedOrigins.includes(o)) {
       return cb(null, true);
     }
 
