@@ -1,3 +1,4 @@
+name: Build and test
 on:
   push:
     branches:
@@ -15,20 +16,27 @@ jobs:
       pull-requests: write
       checks: write
 
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
 
     steps:
       - name: Download code from repository
         uses: actions/checkout@v7
-      
-      - name: Set PostgreSQL database
-        uses: harmon758/postgresql-action@v1
-        with:
-          postgresql version: '18-alpine'
-          postgresql db: 'postgres'
-          postgresql user: 'postgres'
-          postgresql password: 'postgres'
       
       - name: Install pnpm
         uses: pnpm/setup@v1
